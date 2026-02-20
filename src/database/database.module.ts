@@ -16,14 +16,16 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const isProduction = configService.get('NODE_ENV') === 'production';
+        // postgresql://:@/neondb?sslmode=require&channel_binding=require'
         
         return {
           type: 'postgres',
-          host: configService.get('DB_HOST', 'localhost'),
-          port: configService.get('DB_PORT', 5432),
-          username: configService.get('DB_USERNAME', 'postgres'),
-          password: configService.get('DB_PASSWORD', 'password'),
-          database: configService.get('DB_NAME', 'exam'),
+          url: 'postgresql://neondb_owner:npg_SYI1KVxCg2Dm@ep-royal-leaf-aip15rm7.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+          // host: configService.get('DB_HOST', 'ep-royal-leaf-aip15rm7-pooler.c-4.us-east-1.aws.neon.tech'),
+          // port: configService.get('DB_PORT', 5432),
+          // username: configService.get('DB_USERNAME', 'neondb_owner'),
+          // password: configService.get('DB_PASSWORD', 'npg_SYI1KVxCg2Dm'),
+          // database: configService.get('DB_NAME', 'neondb'),
           entities: [
             User,
             Course,
