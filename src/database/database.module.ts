@@ -16,16 +16,12 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const isProduction = configService.get('NODE_ENV') === 'production';
-        // postgresql://:@/neondb?sslmode=require&channel_binding=require'
-        
-        return {
+        const databaseUrl = configService.get('DATABASE_URL');
+        const dbHost = configService.get('DB_HOST', 'localhost');
+        const isLocalDb = dbHost === 'localhost' || dbHost === '127.0.0.1';
+
+        const dbConfig: Record<string, unknown> = {
           type: 'postgres',
-          url: 'postgresql://neondb_owner:npg_SYI1KVxCg2Dm@ep-royal-leaf-aip15rm7.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
-          host: configService.get('DB_HOST', 'ep-royal-leaf-aip15rm7-pooler.c-4.us-east-1.aws.neon.tech'),
-          // port: configService.get('DB_PORT', 5432),
-          username: configService.get('DB_USERNAME', 'neondb_owner'),
-          password: configService.get('DB_PASSWORD', 'npg_SYI1KVxCg2Dm'),
-          database: configService.get('DB_NAME', 'neondb'),
           entities: [
             User,
             Course,
@@ -36,15 +32,35 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
             UserStreak,
             AIChatSession,
           ],
-          synchronize: false, // Use db/schema.sql instead to manage schema changes
+          synchronize: false,
           logging: configService.get('NODE_ENV') === 'development',
-          ssl: isProduction ? { rejectUnauthorized: false } : false,
-          extra: isProduction ? {
-            max: 5, // Maximum pool size for serverless
+        };
+
+        if (databaseUrl) {
+          Object.assign(dbConfig, { url: databaseUrl });
+          if (isProduction || !isLocalDb) {
+            dbConfig.extra = { ssl: { rejectUnauthorized: false } };
+          }
+        } else {
+          Object.assign(dbConfig, {
+            host: dbHost,
+            port: configService.get<number>('DB_PORT', 5432),
+            username: configService.get('DB_USERNAME', 'postgres'),
+            password: configService.get('DB_PASSWORD', 'password'),
+            database: configService.get('DB_NAME', 'exam_preparation'),
+          });
+        }
+
+        if (isProduction) {
+          dbConfig.extra = {
+            max: 5,
             connectionTimeoutMillis: 10000,
             idleTimeoutMillis: 30000,
-          } : {},
-        };
+            ssl: { rejectUnauthorized: false },
+          };
+        }
+
+        return dbConfig;
       },
       inject: [ConfigService],
     }),

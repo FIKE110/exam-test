@@ -12,9 +12,20 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
-import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
+import {
+  CreateCourseDto,
+  UpdateCourseDto,
+  UpdateProgressDto,
+} from './dto/course.dto';
 import { CourseCategory } from './entities/course.entity';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -30,11 +41,17 @@ export class CoursesController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Get all courses' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'category', required: false, enum: CourseCategory })
-  @ApiQuery({ name: 'difficulty', required: false })
-  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    enum: CourseCategory,
+    example: CourseCategory.MEDICAL,
+  })
+  @ApiQuery({ name: 'difficulty', required: false, example: 'medium' })
+  @ApiQuery({ name: 'search', required: false, example: 'math' })
+  @ApiResponse({ status: 200, description: 'Courses retrieved successfully' })
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
@@ -56,6 +73,8 @@ export class CoursesController {
   @Get(':slug')
   @Public()
   @ApiOperation({ summary: 'Get course by slug' })
+  @ApiResponse({ status: 200, description: 'Course retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
   async findBySlug(
     @Param('slug') slug: string,
     @CurrentUser('userId') userId?: string,
@@ -67,6 +86,12 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Enroll in a course' })
+  @ApiResponse({ status: 201, description: 'Successfully enrolled in course' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({
+    status: 400,
+    description: 'Already enrolled or course not found',
+  })
   async enroll(
     @CurrentUser('userId') userId: string,
     @Param('id') courseId: string,
@@ -78,24 +103,29 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update course progress' })
+  @ApiBody({ type: UpdateProgressDto })
+  @ApiResponse({ status: 200, description: 'Progress updated successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 404, description: 'Course enrollment not found' })
   async updateProgress(
     @CurrentUser('userId') userId: string,
     @Param('id') courseId: string,
-    @Body() progressData: {
-      progressPercentage?: number;
-      timeSpentMinutes?: number;
-      currentQuestionId?: string;
-    },
+    @Body() progressData: UpdateProgressDto,
   ) {
     return this.coursesService.updateProgress(userId, courseId, progressData);
   }
 
-  // Admin endpoints
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new course (Admin only)' })
+  @ApiBody({ type: CreateCourseDto })
+  @ApiResponse({ status: 201, description: 'Course created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
   async create(@Body() createCourseDto: CreateCourseDto) {
     return this.coursesService.create(createCourseDto);
   }
@@ -105,6 +135,11 @@ export class CoursesController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a course (Admin only)' })
+  @ApiBody({ type: UpdateCourseDto })
+  @ApiResponse({ status: 200, description: 'Course updated successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
   async update(
     @Param('id') id: string,
     @Body() updateCourseDto: UpdateCourseDto,
@@ -117,6 +152,10 @@ export class CoursesController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a course (Admin only)' })
+  @ApiResponse({ status: 204, description: 'Course deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
   async delete(@Param('id') id: string) {
     await this.coursesService.delete(id);
     return null;

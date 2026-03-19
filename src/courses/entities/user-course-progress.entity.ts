@@ -33,7 +33,13 @@ export class UserCourseProgress {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, name: 'progress_percentage' })
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+    name: 'progress_percentage',
+  })
   progressPercentage: number;
 
   @Column({ type: 'integer', default: 0, name: 'time_spent_minutes' })

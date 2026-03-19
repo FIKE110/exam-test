@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -98,7 +102,10 @@ export class AuthService {
   async refreshTokens(refreshToken: string): Promise<AuthTokens> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get('JWT_REFRESH_SECRET', 'refresh-secret-key'),
+        secret: this.configService.get(
+          'JWT_REFRESH_SECRET',
+          'refresh-secret-key',
+        ),
       });
 
       const user = await this.userRepository.findOne({
@@ -159,7 +166,10 @@ export class AuthService {
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get('JWT_REFRESH_SECRET', 'refresh-secret-key'),
+        secret: this.configService.get(
+          'JWT_REFRESH_SECRET',
+          'refresh-secret-key',
+        ),
         expiresIn: '7d',
       }),
     ]);

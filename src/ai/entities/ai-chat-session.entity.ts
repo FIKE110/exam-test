@@ -37,7 +37,13 @@ export class AIChatSession {
   @Column({ type: 'boolean', default: false, name: 'is_shared' })
   isShared: boolean;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, unique: true, name: 'share_token' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    unique: true,
+    name: 'share_token',
+  })
   shareToken: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

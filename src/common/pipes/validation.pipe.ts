@@ -1,4 +1,7 @@
-import { ValidationPipe as NestValidationPipe, ValidationError } from '@nestjs/common';
+import {
+  ValidationPipe as NestValidationPipe,
+  ValidationError,
+} from '@nestjs/common';
 
 export const validationPipeConfig = new NestValidationPipe({
   whitelist: true, // Strip properties that don't have decorators
@@ -8,9 +11,11 @@ export const validationPipeConfig = new NestValidationPipe({
     enableImplicitConversion: true,
   },
   exceptionFactory: (errors: ValidationError[]) => {
-    const formatErrors = (errors: ValidationError[]): Array<{ field: string; message: string }> => {
+    const formatErrors = (
+      errors: ValidationError[],
+    ): Array<{ field: string; message: string }> => {
       const result: Array<{ field: string; message: string }> = [];
-      
+
       for (const error of errors) {
         if (error.constraints) {
           result.push({
@@ -18,12 +23,12 @@ export const validationPipeConfig = new NestValidationPipe({
             message: Object.values(error.constraints)[0],
           });
         }
-        
+
         if (error.children && error.children.length > 0) {
           result.push(...formatErrors(error.children));
         }
       }
-      
+
       return result;
     };
 

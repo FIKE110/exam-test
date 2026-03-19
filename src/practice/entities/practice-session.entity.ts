@@ -11,7 +11,11 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Course } from '../../courses/entities/course.entity';
-import { SessionType, SessionStatus, Difficulty } from '../../common/enums/practice.enum';
+import {
+  SessionType,
+  SessionStatus,
+  Difficulty,
+} from '../../common/enums/practice.enum';
 import { SessionAnswer } from './session-answer.entity';
 
 @Entity('practice_sessions')
@@ -60,7 +64,13 @@ export class PracticeSession {
   @Column({ type: 'integer', default: 0, name: 'correct_answers' })
   correctAnswers: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, name: 'accuracy_percentage' })
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    name: 'accuracy_percentage',
+  })
   accuracyPercentage: number | null;
 
   @Column({ type: 'integer', nullable: true, name: 'time_limit_minutes' })

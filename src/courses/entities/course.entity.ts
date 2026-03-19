@@ -56,7 +56,12 @@ export class Course {
   @Column({ type: 'integer', default: 0, name: 'total_questions' })
   totalQuestions: number;
 
-  @Column({ type: 'varchar', length: 500, nullable: true, name: 'thumbnail_url' })
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    name: 'thumbnail_url',
+  })
   thumbnailUrl: string | null;
 
   @Column({ type: 'boolean', default: true, name: 'is_active' })

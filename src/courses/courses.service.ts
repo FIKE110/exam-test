@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course, CourseCategory } from './entities/course.entity';
@@ -34,7 +38,9 @@ export class CoursesService {
     }
 
     if (difficulty) {
-      queryBuilder.andWhere('course.difficulty_level = :difficulty', { difficulty });
+      queryBuilder.andWhere('course.difficulty_level = :difficulty', {
+        difficulty,
+      });
     }
 
     if (search) {

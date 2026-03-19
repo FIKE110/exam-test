@@ -6,7 +6,10 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { SubscriptionTier, SubscriptionStatus } from '../../common/enums/subscription.enum';
+import {
+  SubscriptionTier,
+  SubscriptionStatus,
+} from '../../common/enums/subscription.enum';
 import { Role } from '../../common/decorators/roles.decorator';
 
 @Entity('users')
@@ -47,7 +50,11 @@ export class User {
   })
   subscriptionStatus: SubscriptionStatus;
 
-  @Column({ type: 'timestamp', nullable: true, name: 'subscription_expires_at' })
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    name: 'subscription_expires_at',
+  })
   subscriptionExpiresAt: Date | null;
 
   @Column({ type: 'boolean', default: false, name: 'is_admin' })

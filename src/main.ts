@@ -14,10 +14,7 @@ const server = express();
 
 // Bootstrap function
 async function bootstrap() {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(server),
-  );
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
   // Global prefix
   app.setGlobalPrefix('api');
@@ -40,12 +37,31 @@ async function bootstrap() {
   // Generate OpenAPI document
   const config = new DocumentBuilder()
     .setTitle('Exam Preparation Platform API')
-    .setDescription('API for exam preparation platform with AI study assistance, practice tests, and progress tracking')
+    .setDescription(
+      'API for exam preparation platform with AI study assistance, practice tests, and progress tracking',
+    )
     .setVersion('1.0.0')
-    .addBearerAuth()
+    .addTag('Health', 'Health check endpoints')
+    .addTag('Authentication', 'User authentication and authorization')
+    .addTag('Users', 'User profile and account management')
+    .addTag('Courses', 'Exam courses and enrollment')
+    .addApiKey({ type: 'apiKey', name: 'api_key', in: 'header' }, 'api_key')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter your JWT token',
+      },
+      'JWT-auth',
+    )
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
+
+  // Add components/schemas for DTOs
+  document.components = document.components || {};
+  document.components.schemas = document.components.schemas || {};
 
   // Serve OpenAPI JSON
   server.use('/api/docs-json', (req, res) => {
@@ -64,7 +80,7 @@ async function bootstrap() {
   );
 
   await app.init();
-  
+
   return app;
 }
 
