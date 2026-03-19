@@ -32,7 +32,7 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
             UserStreak,
             AIChatSession,
           ],
-          synchronize: false,
+          synchronize: true,
           logging: configService.get('NODE_ENV') === 'development',
         };
 
@@ -47,7 +47,7 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
             port: configService.get<number>('DB_PORT', 5432),
             username: configService.get('DB_USERNAME', 'postgres'),
             password: configService.get('DB_PASSWORD', 'password'),
-            database: configService.get('DB_NAME', 'exam_preparation'),
+            database: configService.get('DB_NAME', 'exam'),
           });
         }
 
