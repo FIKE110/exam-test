@@ -11,6 +11,8 @@ import {
   SubscriptionStatus,
 } from '../../common/enums/subscription.enum';
 import { Role } from '../../common/decorators/roles.decorator';
+import { ProfessionCode } from '../../common/enums/profession.enum';
+import { ExamTypeCode } from '../../common/enums/exam-type.enum';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -33,6 +35,28 @@ export class User {
 
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'avatar_url' })
   avatarUrl: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string | null;
+
+  @Column({ type: 'date', nullable: true, name: 'date_of_birth' })
+  dateOfBirth: Date | null;
+
+  @Column({
+    type: 'enum',
+    enum: ProfessionCode,
+    nullable: true,
+    name: 'profession',
+  })
+  profession: ProfessionCode | null;
+
+  @Column({
+    type: 'enum',
+    enum: ExamTypeCode,
+    array: true,
+    name: 'exam_types',
+  })
+  examTypes: ExamTypeCode[];
 
   @Column({
     type: 'enum',
@@ -69,12 +93,10 @@ export class User {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  // Helper getter for role
   get role(): Role {
     return this.isAdmin ? Role.ADMIN : Role.USER;
   }
 
-  // Helper getter for full name
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;
   }

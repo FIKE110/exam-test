@@ -23,9 +23,17 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const { email, password, firstName, lastName } = registerDto;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+      dateOfBirth,
+      profession,
+      examTypes,
+    } = registerDto;
 
-    // Check if user already exists
     const existingUser = await this.userRepository.findOne({
       where: { email },
     });
@@ -34,21 +42,22 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
-    // Hash password
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
     const user = this.userRepository.create({
       email,
       passwordHash,
       firstName,
       lastName,
+      phone: phone || null,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      profession,
+      examTypes,
     });
 
     await this.userRepository.save(user);
 
-    // Generate tokens
     const tokens = await this.generateTokens(user);
 
     return {
@@ -57,8 +66,14 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        subscriptionTier: user.subscriptionTier,
         avatarUrl: user.avatarUrl,
+        phone: user.phone,
+        dateOfBirth: user.dateOfBirth,
+        profession: user.profession,
+        examTypes: user.examTypes,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
       },
       tokens,
     };
@@ -67,7 +82,6 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<AuthResponse> {
     const { email, password } = loginDto;
 
-    // Find user
     const user = await this.userRepository.findOne({
       where: { email },
     });
@@ -76,14 +90,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate tokens
     const tokens = await this.generateTokens(user);
 
     return {
@@ -92,8 +104,14 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        subscriptionTier: user.subscriptionTier,
         avatarUrl: user.avatarUrl,
+        phone: user.phone,
+        dateOfBirth: user.dateOfBirth,
+        profession: user.profession,
+        examTypes: user.examTypes,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
       },
       tokens,
     };
@@ -123,9 +141,6 @@ export class AuthService {
   }
 
   async logout(userId: string): Promise<void> {
-    // In a more complex implementation, you might want to invalidate the token
-    // by adding it to a blacklist in Redis
-    // For now, we'll just return success
     return;
   }
 
@@ -144,11 +159,15 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       avatarUrl: user.avatarUrl,
+      phone: user.phone,
+      dateOfBirth: user.dateOfBirth,
+      profession: user.profession,
+      examTypes: user.examTypes,
       subscriptionTier: user.subscriptionTier,
       subscriptionStatus: user.subscriptionStatus,
       subscriptionExpiresAt: user.subscriptionExpiresAt,
-      currentStreak: 0, // TODO: Fetch from user streaks
-      longestStreak: 0, // TODO: Fetch from user streaks
+      currentStreak: 0,
+      longestStreak: 0,
     };
   }
 

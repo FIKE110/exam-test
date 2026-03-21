@@ -5,12 +5,16 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS user_exam_types CASCADE;
 DROP TABLE IF EXISTS session_answers CASCADE;
 DROP TABLE IF EXISTS practice_sessions CASCADE;
 DROP TABLE IF EXISTS questions CASCADE;
 DROP TABLE IF EXISTS user_course_progress CASCADE;
 DROP TABLE IF EXISTS user_streaks CASCADE;
 DROP TABLE IF EXISTS ai_chat_sessions CASCADE;
+DROP TABLE IF EXISTS exam_types CASCADE;
+DROP TABLE IF EXISTS sectors CASCADE;
+DROP TABLE IF EXISTS professions CASCADE;
 DROP TABLE IF EXISTS courses CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
@@ -41,6 +45,10 @@ CREATE TABLE users (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     avatar_url VARCHAR(500),
+    phone VARCHAR(20),
+    date_of_birth DATE,
+    profession_id UUID REFERENCES professions(id) ON DELETE SET NULL,
+    sector_id UUID REFERENCES sectors(id) ON DELETE SET NULL,
     subscription_tier subscription_tier DEFAULT 'free',
     subscription_status subscription_status DEFAULT 'active',
     subscription_expires_at TIMESTAMP,
@@ -157,9 +165,57 @@ CREATE TABLE ai_chat_sessions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Professions table
+CREATE TABLE professions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    icon_url VARCHAR(100),
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sectors table
+CREATE TABLE sectors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    icon_url VARCHAR(100),
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Exam types table
+CREATE TABLE exam_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    icon_url VARCHAR(100),
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    sector_id UUID NOT NULL REFERENCES sectors(id) ON DELETE CASCADE,
+    profession_id UUID REFERENCES professions(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User exam types junction table (many-to-many)
+CREATE TABLE user_exam_types (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    exam_type_id UUID NOT NULL REFERENCES exam_types(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, exam_type_id)
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_subscription_tier ON users(subscription_tier);
+CREATE INDEX idx_users_profession_id ON users(profession_id);
+CREATE INDEX idx_users_sector_id ON users(sector_id);
 
 CREATE INDEX idx_courses_slug ON courses(slug);
 CREATE INDEX idx_courses_category ON courses(category);
@@ -183,6 +239,19 @@ CREATE INDEX idx_session_answers_question_id ON session_answers(question_id);
 
 CREATE INDEX idx_user_streaks_user_id ON user_streaks(user_id);
 CREATE INDEX idx_user_streaks_last_practice_date ON user_streaks(last_practice_date);
+
+CREATE INDEX idx_professions_name ON professions(name);
+CREATE INDEX idx_professions_is_active ON professions(is_active);
+
+CREATE INDEX idx_sectors_name ON sectors(name);
+CREATE INDEX idx_sectors_is_active ON sectors(is_active);
+
+CREATE INDEX idx_exam_types_sector_id ON exam_types(sector_id);
+CREATE INDEX idx_exam_types_profession_id ON exam_types(profession_id);
+CREATE INDEX idx_exam_types_is_active ON exam_types(is_active);
+
+CREATE INDEX idx_user_exam_types_user_id ON user_exam_types(user_id);
+CREATE INDEX idx_user_exam_types_exam_type_id ON user_exam_types(exam_type_id);
 
 CREATE INDEX idx_ai_chat_sessions_user_id ON ai_chat_sessions(user_id);
 CREATE INDEX idx_ai_chat_sessions_share_token ON ai_chat_sessions(share_token);
@@ -216,4 +285,13 @@ CREATE TRIGGER update_user_streaks_updated_at BEFORE UPDATE ON user_streaks
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_ai_chat_sessions_updated_at BEFORE UPDATE ON ai_chat_sessions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_professions_updated_at BEFORE UPDATE ON professions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_sectors_updated_at BEFORE UPDATE ON sectors
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_exam_types_updated_at BEFORE UPDATE ON exam_types
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

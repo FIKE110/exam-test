@@ -9,6 +9,9 @@ import { PracticeSession } from '../practice/entities/practice-session.entity';
 import { SessionAnswer } from '../practice/entities/session-answer.entity';
 import { UserStreak } from '../progress/entities/user-streak.entity';
 import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
+import { Profession } from '../domain/entities/profession.entity';
+import { Sector } from '../domain/entities/sector.entity';
+import { ExamType } from '../domain/entities/exam-type.entity';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { AIChatSession } from '../ai/entities/ai-chat-session.entity';
             SessionAnswer,
             UserStreak,
             AIChatSession,
+            Profession,
+            Sector,
+            ExamType,
           ],
           synchronize: true,
           logging: configService.get('NODE_ENV') === 'development',

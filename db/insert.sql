@@ -1,6 +1,75 @@
 -- Mock Data for Exam Preparation Platform
 -- Run after schema.sql
 
+-- Insert Professions
+INSERT INTO professions (id, name, description, display_order, is_active)
+VALUES 
+    ('p1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 'Student', 'Currently enrolled in education', 1, TRUE),
+    ('p2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 'Doctor', 'Medical professional or physician', 2, TRUE),
+    ('p3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 'Nurse', 'Healthcare nursing professional', 3, TRUE),
+    ('p4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 'Engineer', 'Engineering professional', 4, TRUE),
+    ('p5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 'Teacher', 'Education professional', 5, TRUE),
+    ('p6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 'Accountant', 'Financial accounting professional', 6, TRUE),
+    ('p7eebc99-9c0b-4ef8-bb6d-6bb9bd380a07', 'IT Professional', 'Information technology professional', 7, TRUE),
+    ('p8eebc99-9c0b-4ef8-bb6d-6bb9bd380a08', 'Lawyer', 'Legal professional', 8, TRUE),
+    ('p9eebc99-9c0b-4ef8-bb6d-6bb9bd380a09', 'Business Professional', 'Business and management professional', 9, TRUE),
+    ('p10eebc99-9c0b-4ef8-bb6d-6bb9bd380a10', 'Other', 'Other profession', 10, TRUE);
+
+-- Insert Sectors
+INSERT INTO sectors (id, name, description, display_order, is_active)
+VALUES 
+    ('s1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 'Education', 'Educational exams and certifications', 1, TRUE),
+    ('s2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 'Health', 'Healthcare and medical exams', 2, TRUE),
+    ('s3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 'Technology', 'Technology and IT certifications', 3, TRUE),
+    ('s4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 'Finance', 'Finance and accounting certifications', 4, TRUE),
+    ('s5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 'Law', 'Legal and bar examinations', 5, TRUE),
+    ('s6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 'Business', 'Business and management certifications', 6, TRUE);
+
+-- Insert Exam Types
+INSERT INTO exam_types (id, name, description, sector_id, display_order, is_active)
+VALUES 
+    -- Education Sector
+    ('e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 'WAEC', 'West African Examinations Council', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 1, TRUE),
+    ('e2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 'NECO', 'National Examinations Council', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 2, TRUE),
+    ('e3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 'JAMB', 'Joint Admissions and Matriculation Board', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 3, TRUE),
+    ('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 'GRE', 'Graduate Record Examination', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 4, TRUE),
+    ('e5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 'GMAT', 'Graduate Management Admission Test', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 5, TRUE),
+    ('e6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 'SAT', 'Scholastic Assessment Test', 's1eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', 6, TRUE),
+    
+    -- Health Sector
+    ('e7eebc99-9c0b-4ef8-bb6d-6bb9bd380a07', 'PLAB', 'Professional and Linguistic Assessments Board', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 1, TRUE),
+    ('e8eebc99-9c0b-4ef8-bb6d-6bb9bd380a08', 'USMLE', 'United States Medical Licensing Examination', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 2, TRUE),
+    ('e9eebc99-9c0b-4ef8-bb6d-6bb9bd380a09', 'NCLEX', 'National Council Licensure Examination', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 3, TRUE),
+    ('e10eebc99-9c0b-4ef8-bb6d-6bb9bd380a10', 'AMC', 'Australian Medical Council Exam', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 4, TRUE),
+    ('e11eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Nursing Exam', 'Various nursing certification exams', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 5, TRUE),
+    ('e12eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'MRCP', 'Membership of the Royal Colleges of Physicians', 's2eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 6, TRUE),
+    
+    -- Technology Sector
+    ('e13eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'AWS Certification', 'Amazon Web Services Certifications', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 1, TRUE),
+    ('e14eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'Azure Certification', 'Microsoft Azure Certifications', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 2, TRUE),
+    ('e15eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'Google Cloud', 'Google Cloud Platform Certifications', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 3, TRUE),
+    ('e16eebc99-9c0b-4ef8-bb6d-6bb9bd380a16', 'CISSP', 'Certified Information Systems Security Professional', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 4, TRUE),
+    ('e17eebc99-9c0b-4ef8-bb6d-6bb9bd380a17', 'CompTIA', 'Computing Technology Industry Association', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 5, TRUE),
+    ('e18eebc99-9c0b-4ef8-bb6d-6bb9bd380a18', 'CCNA', 'Cisco Certified Network Associate', 's3eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', 6, TRUE),
+    
+    -- Finance Sector
+    ('e19eebc99-9c0b-4ef8-bb6d-6bb9bd380a19', 'CPA', 'Certified Public Accountant', 's4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 1, TRUE),
+    ('e20eebc99-9c0b-4ef8-bb6d-6bb9bd380a20', 'CFA', 'Chartered Financial Analyst', 's4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 2, TRUE),
+    ('e21eebc99-9c0b-4ef8-bb6d-6bb9bd380a21', 'ACCA', 'Association of Chartered Certified Accountants', 's4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 3, TRUE),
+    ('e22eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'CA', 'Chartered Accountant', 's4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 4, TRUE),
+    ('e23eebc99-9c0b-4ef8-bb6d-6bb9bd380a23', 'FRM', 'Financial Risk Manager', 's4eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 5, TRUE),
+    
+    -- Law Sector
+    ('e24eebc99-9c0b-4ef8-bb6d-6bb9bd380a24', 'Bar Exam', 'Bar Examination', 's5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 1, TRUE),
+    ('e25eebc99-9c0b-4ef8-bb6d-6bb9bd380a25', 'LLM', 'Master of Laws', 's5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 2, TRUE),
+    ('e26eebc99-9c0b-4ef8-bb6d-6bb9bd380a26', 'CLPE', 'Common Law Admission Test', 's5eebc99-9c0b-4ef8-bb6d-6bb9bd380a05', 3, TRUE),
+    
+    -- Business Sector
+    ('e27eebc99-9c0b-4ef8-bb6d-6bb9bd380a27', 'PMP', 'Project Management Professional', 's6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 1, TRUE),
+    ('e28eebc99-9c0b-4ef8-bb6d-6bb9bd380a28', 'MBA', 'Master of Business Administration', 's6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 2, TRUE),
+    ('e29eebc99-9c0b-4ef8-bb6d-6bb9bd380a29', 'Six Sigma', 'Six Sigma Certification', 's6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 3, TRUE),
+    ('e30eebc99-9c0b-4ef8-bb6d-6bb9bd380a30', 'Agile', 'Agile Certifications', 's6eebc99-9c0b-4ef8-bb6d-6bb9bd380a06', 4, TRUE);
+
 -- Insert admin user (password: admin123)
 INSERT INTO users (id, email, password_hash, first_name, last_name, is_admin, subscription_tier, subscription_status, email_verified)
 VALUES (

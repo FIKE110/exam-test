@@ -8,6 +8,7 @@ import { QuestionsModule } from './questions/questions.module';
 import { PracticeModule } from './practice/practice.module';
 import { ProgressModule } from './progress/progress.module';
 import { AdminModule } from './admin/admin.module';
+import { DomainModule } from './domain/domain.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AdminModule } from './admin/admin.module';
     PracticeModule,
     ProgressModule,
     AdminModule,
+    DomainModule,
   ],
 })
 export class AppModule {}
