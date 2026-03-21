@@ -15,6 +15,10 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private readonly ACCESS_TOKEN_EXPIRY = '15m';
+  private readonly REFRESH_TOKEN_EXPIRY_SHORT = '7d';
+  private readonly REFRESH_TOKEN_EXPIRY_LONG = '30d';
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -58,7 +62,7 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, false);
 
     return {
       user: {
@@ -79,7 +83,7 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async login(loginDto: LoginDto, rememberMe = false): Promise<AuthResponse> {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({
@@ -96,7 +100,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, rememberMe);
 
     return {
       user: {
@@ -117,7 +121,10 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(refreshToken: string): Promise<AuthTokens> {
+  async refreshTokens(
+    refreshToken: string,
+    rememberMe = false,
+  ): Promise<AuthTokens> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get(
@@ -134,7 +141,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      return this.generateTokens(user);
+      return this.generateTokens(user, rememberMe);
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -171,25 +178,33 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(user: User): Promise<AuthTokens> {
+  private async generateTokens(
+    user: User,
+    rememberMe: boolean,
+  ): Promise<AuthTokens> {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       subscriptionTier: user.subscriptionTier,
+      rememberMe,
     };
+
+    const refreshTokenExpiry = rememberMe
+      ? this.REFRESH_TOKEN_EXPIRY_LONG
+      : this.REFRESH_TOKEN_EXPIRY_SHORT;
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get('JWT_SECRET', 'your-secret-key'),
-        expiresIn: '15m',
+        expiresIn: this.ACCESS_TOKEN_EXPIRY,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get(
           'JWT_REFRESH_SECRET',
           'refresh-secret-key',
         ),
-        expiresIn: '7d',
+        expiresIn: refreshTokenExpiry,
       }),
     ]);
 

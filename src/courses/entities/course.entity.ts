@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Difficulty } from '../../common/enums/practice.enum';
 import { Question } from '../../questions/entities/question.entity';
+import { StudyMaterial } from '../../study-materials/entities/study-material.entity';
 
 export enum CourseCategory {
   MEDICAL = 'medical',
@@ -75,4 +76,7 @@ export class Course {
 
   @OneToMany(() => Question, (question) => question.course)
   questions: Question[];
+
+  @OneToMany(() => StudyMaterial, (material) => material.course)
+  studyMaterials: StudyMaterial[];
 }

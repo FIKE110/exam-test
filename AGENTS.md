@@ -1,23 +1,26 @@
 # Backend Project: Exam Preparation Platform
 
 ## Overview
+
 Backend API for an exam preparation platform with AI-powered study assistance, practice tests, mock exams, and progress tracking. Designed for candidates preparing for high-stakes professional exams abroad.
 
 ## Core Features (from Wireframes)
 
 ### User Management
+
 - User authentication (login/signup)
 - User profiles with avatars
 - Subscription plans (free/upgrade)
 
 ### Learning Features
+
 - **Exam Categories**: Different exam types and subjects with progress tracking
   - Course/subject enrollment
   - Progress percentage tracking
   - Time remaining estimation
   - Resume functionality
 
-- **Practice Sessions**: 
+- **Practice Sessions**:
   - Focused Practice (by topic and difficulty)
   - Mock Exams (timed exam simulations)
   - Question banks with categories
@@ -29,6 +32,7 @@ Backend API for an exam preparation platform with AI-powered study assistance, p
   - Exam clarification and explanations
 
 ### Progress & Analytics
+
 - **Track Progress**:
   - Daily streak tracking (3+ days)
   - Weekly activity calendar
@@ -41,6 +45,7 @@ Backend API for an exam preparation platform with AI-powered study assistance, p
   - Topic-based organization
 
 ### Social Features
+
 - **Peer Review**:
   - Discussion forums
   - Question sharing between candidates
@@ -95,22 +100,26 @@ Discussions/PeerReview
 ## API Endpoints (Potential)
 
 ### Authentication
+
 - POST /api/auth/register
 - POST /api/auth/login
 - POST /api/auth/logout
 - GET /api/auth/me
 
 ### Dashboard
+
 - GET /api/dashboard/stats (streak, progress, recent activity)
 - GET /api/dashboard/continue-learning
 
 ### Courses (Exam Subjects)
+
 - GET /api/courses
 - GET /api/courses/:id
 - POST /api/courses/:id/enroll
 - PUT /api/courses/:id/progress
 
 ### Practice
+
 - POST /api/practice/start
 - GET /api/practice/questions
 - POST /api/practice/submit
@@ -118,26 +127,31 @@ Discussions/PeerReview
 - GET /api/practice/history
 
 ### Mock Exams
+
 - GET /api/mock-exams
 - POST /api/mock-exams/:id/start
 - POST /api/mock-exams/:id/submit
 - GET /api/mock-exams/:id/results
 
 ### AI Study
+
 - POST /api/ai/chat
 - GET /api/ai/study-materials
 
 ### Progress
+
 - GET /api/progress/stats
 - GET /api/progress/streak
 - GET /api/progress/history
 
 ### Peer Review
+
 - GET /api/discussions
 - POST /api/discussions
 - POST /api/discussions/:id/reply
 
 ### Admin (from Admin Dashboard wireframe)
+
 - User management
 - Content management
 - Analytics/statistics
@@ -152,6 +166,7 @@ Discussions/PeerReview
 - **Security**: JWT auth, rate limiting, input validation
 
 ## Tech Stack
+
 - **Backend**: NestJS with TypeScript
 - **Database**: PostgreSQL + TypeORM
 - **Authentication**: JWT (access & refresh tokens)
@@ -166,6 +181,7 @@ Discussions/PeerReview
 All API endpoints follow a consistent response format:
 
 ### Success Response
+
 ```json
 {
   "status": true,
@@ -187,6 +203,7 @@ All API endpoints follow a consistent response format:
 ```
 
 ### Error Response
+
 ```json
 {
   "status": false,
@@ -209,6 +226,7 @@ All API endpoints follow a consistent response format:
 ```
 
 ### HTTP Status Codes Used
+
 - `200 OK`: Successful GET, PUT
 - `201 Created`: Successful POST
 - `204 No Content`: Successful DELETE
@@ -223,8 +241,9 @@ All API endpoints follow a consistent response format:
 ## Implementation Status
 
 ### ✅ Completed
+
 - **Project Setup**: NestJS initialized with TypeScript
-- **Common Utilities**: 
+- **Common Utilities**:
   - TransformInterceptor (standardized API responses)
   - AllExceptionsFilter (consistent error handling)
   - ValidationPipe with class-validator
@@ -241,7 +260,7 @@ All API endpoints follow a consistent response format:
   - SessionAnswer (user responses)
   - UserStreak (gamification)
   - AIChatSession (chat history)
-- **Auth Module**: 
+- **Auth Module**:
   - JWT strategy with access & refresh tokens
   - Register/Login endpoints
   - Password hashing with bcrypt
@@ -253,9 +272,32 @@ All API endpoints follow a consistent response format:
   - Enrollment system
   - Progress tracking
   - Search & filtering
-- **API Documentation**: Scalar integration
+- **API Documentation**: Scalar integration with full Swagger schemas
+
+### ✅ Swagger Documentation Complete (All Controllers)
+
+All API endpoints are fully documented with comprehensive Swagger schemas:
+
+- **Auth** (5 endpoints) - Register, Login, Refresh, Logout, Me
+- **Users** (4 endpoints) - Profile, Update Profile, Stats, Admin List
+- **Courses** (7 endpoints) - List, Get, Enroll, Progress, Create, Update, Delete
+- **Search History** (4 endpoints) - Get, Add, Clear All, Delete
+- **Progress** (5 endpoints) - Study Trends, Weekly Hours Summary, Weekly Hours, Overall, Streak
+- **Notifications** (5 endpoints) - Create, List, Mark Read, Mark All Read, Delete
+- **Admin** (20 endpoints) - Dashboard, Users, Questions, Courses, Statistics
+- **Focused Practice** (8 endpoints) - Start, Get Questions, Submit Answer, Complete, History, etc.
+- **Goals & Milestones** (6 endpoints) - CRUD and Status tracking
+- **Subscriptions** (4 endpoints) - Create Checkout, Get Status, Cancel, Webhook
+- **Events** (8 endpoints) - CRUD, Register, Cancel Registration
+- **Discussions** (15 endpoints) - CRUD, Replies, Upvote, Admin Flag Review
+- **AI Chat** (3 endpoints) - Chat, History, Clear
+- **Study Materials** (7 endpoints) - CRUD, List by Course
+- **Chat Support** (5 endpoints) - Create, Messages, Mark Read
+- **Upload** (3 endpoints) - Avatar, Material, Get File
+- **Health** (1 endpoint) - Health check
 
 ### 🚧 Pending Implementation
+
 - **Questions Module**:
   - CRUD operations
   - Question filtering by difficulty/topic
@@ -288,6 +330,7 @@ All API endpoints follow a consistent response format:
   - Redis caching
 
 ## Project Structure
+
 ```
 src/
 ├── common/              # Shared utilities
@@ -320,6 +363,7 @@ The application uses PostgreSQL with TypeORM. Schema management is done via SQL 
 **Note**: TypeORM `synchronize` is disabled. Always use `db/schema.sql` for schema changes.
 
 ## Notes
+
 - Platform designed for exam preparation (medical, professional certifications, etc.)
 - Gamification elements (streaks, goals)
 - Subscription model with upgrade options

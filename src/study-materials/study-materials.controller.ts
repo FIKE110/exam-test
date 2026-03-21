@@ -1,0 +1,416 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
+import { StudyMaterialsService } from './study-materials.service';
+import {
+  CreateStudyMaterialDto,
+  UpdateStudyMaterialDto,
+  QueryStudyMaterialDto,
+  RateMaterialDto,
+} from './dto/study-material.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles, Role } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
+
+@ApiTags('Study Materials')
+@Controller('study-materials')
+export class StudyMaterialsController {
+  constructor(private studyMaterialsService: StudyMaterialsService) {}
+
+  @Get()
+  @Public()
+  @ApiOperation({ summary: 'Get all study materials' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 20,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'courseId',
+    required: false,
+    type: String,
+    description: 'Filter by course UUID',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search term',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Study materials retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'string',
+                example: '550e8400-e29b-41d4-a716-446655440001',
+              },
+              title: { type: 'string', example: 'Cardiology Fundamentals' },
+              description: {
+                type: 'string',
+                example: 'Essential concepts in cardiology...',
+              },
+              content: { type: 'string', example: '...' },
+              fileUrl: {
+                type: 'string',
+                nullable: true,
+                example: 'https://example.com/materials/cardiology.pdf',
+              },
+              courseId: {
+                type: 'string',
+                example: '550e8400-e29b-41d4-a716-446655440002',
+              },
+              course: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: {
+                    type: 'string',
+                    example: '550e8400-e29b-41d4-a716-446655440002',
+                  },
+                  title: { type: 'string', example: 'PLAB Prep' },
+                },
+              },
+              createdBy: {
+                type: 'string',
+                example: '550e8400-e29b-41d4-a716-446655440003',
+              },
+              createdAt: { type: 'string', example: '2026-03-21T10:00:00Z' },
+              reactionCount: { type: 'number', example: 25 },
+              averageRating: { type: 'number', example: 4.5 },
+            },
+          },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 20 },
+                total: { type: 'number', example: 10 },
+                totalPages: { type: 'number', example: 1 },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('courseId') courseId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.studyMaterialsService.findAll({
+      page,
+      limit,
+      courseId,
+      search,
+    });
+  }
+
+  @Get(':id')
+  @Public()
+  @ApiOperation({ summary: 'Get study material by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Study material retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            title: { type: 'string', example: 'Cardiology Fundamentals' },
+            description: {
+              type: 'string',
+              example: 'Essential concepts in cardiology...',
+            },
+            content: {
+              type: 'string',
+              example: 'Full study material content...',
+            },
+            fileUrl: {
+              type: 'string',
+              nullable: true,
+              example: 'https://example.com/materials/cardiology.pdf',
+            },
+            courseId: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440002',
+            },
+            course: { type: 'object', nullable: true },
+            reactionCount: { type: 'number', example: 25 },
+            averageRating: { type: 'number', example: 4.5 },
+            createdAt: { type: 'string', example: '2026-03-21T10:00:00Z' },
+            updatedAt: { type: 'string', example: '2026-03-21T10:00:00Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async findOne(@Param('id') id: string) {
+    return this.studyMaterialsService.findOne(id);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new study material (Admin only)' })
+  @ApiBody({
+    description: 'Study material data',
+    schema: {
+      type: 'object',
+      required: ['title', 'content', 'courseId'],
+      properties: {
+        title: {
+          type: 'string',
+          example: 'New Study Material',
+          maxLength: 255,
+        },
+        description: {
+          type: 'string',
+          example: 'Description of the material...',
+        },
+        content: {
+          type: 'string',
+          example: 'Full content of the study material...',
+        },
+        courseId: {
+          type: 'string',
+          format: 'uuid',
+          example: '550e8400-e29b-41d4-a716-446655440001',
+        },
+        fileUrl: {
+          type: 'string',
+          format: 'uri',
+          example: 'https://example.com/file.pdf',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Study material created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            title: { type: 'string', example: 'New Study Material' },
+            createdAt: { type: 'string', example: '2026-03-22T10:00:00Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async create(@Body() createDto: CreateStudyMaterialDto) {
+    return this.studyMaterialsService.create(createDto);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a study material (Admin only)' })
+  @ApiBody({
+    description: 'Study material update data',
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: 'Updated Title' },
+        description: { type: 'string', example: 'Updated description...' },
+        content: { type: 'string', example: 'Updated content...' },
+        fileUrl: {
+          type: 'string',
+          format: 'uri',
+          example: 'https://example.com/updated-file.pdf',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Study material updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            title: { type: 'string', example: 'Updated Title' },
+            updatedAt: { type: 'string', example: '2026-03-22T11:00:00Z' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateStudyMaterialDto,
+  ) {
+    return this.studyMaterialsService.update(id, updateDto);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a study material (Admin only)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Study material deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async delete(@Param('id') id: string) {
+    await this.studyMaterialsService.delete(id);
+    return null;
+  }
+
+  @Post(':id/react')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add thumbs up reaction to a study material' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reaction added successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            reactionCount: { type: 'number', example: 26 },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async addReaction(@Param('id') id: string) {
+    return this.studyMaterialsService.addReaction(id);
+  }
+
+  @Post(':id/rate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Rate a study material (0-5)' })
+  @ApiBody({
+    description: 'Rating value',
+    schema: {
+      type: 'object',
+      required: ['rating'],
+      properties: {
+        rating: {
+          type: 'number',
+          minimum: 0,
+          maximum: 5,
+          example: 5,
+          description: 'Rating from 0 to 5 stars',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rating submitted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            averageRating: { type: 'number', example: 4.6 },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Rating must be between 0 and 5' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async addRating(@Param('id') id: string, @Body() rateDto: RateMaterialDto) {
+    return this.studyMaterialsService.addRating(id, rateDto.rating);
+  }
+}

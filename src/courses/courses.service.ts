@@ -24,9 +24,20 @@ export class CoursesService {
     category?: CourseCategory;
     difficulty?: string;
     search?: string;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
     userId?: string;
   }) {
-    const { page, limit, category, difficulty, search, userId } = options;
+    const {
+      page,
+      limit,
+      category,
+      difficulty,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      userId,
+    } = options;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.courseRepository
@@ -50,8 +61,13 @@ export class CoursesService {
       );
     }
 
+    const validSortFields = ['name', 'created_at', 'title'];
+    const sortField = validSortFields.includes(sortBy || '')
+      ? `course.${sortBy}`
+      : 'course.created_at';
+
     const [courses, total] = await queryBuilder
-      .orderBy('course.created_at', 'DESC')
+      .orderBy(sortField, sortOrder)
       .skip(skip)
       .take(limit)
       .getManyAndCount();
