@@ -17,6 +17,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -28,7 +29,11 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async register(@Body() registerDto: RegisterDto) {
@@ -39,7 +44,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Successfully logged in' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully logged in',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
@@ -85,7 +94,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved',
+    type: UserResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Authentication required' })
   async getMe(@CurrentUser('userId') userId: string) {
     return this.authService.getMe(userId);
