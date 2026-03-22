@@ -30,12 +30,11 @@ export class AuthService {
     const {
       email,
       password,
-      firstName,
-      lastName,
+      fullName,
       phone,
       dateOfBirth,
       profession,
-      examTypes,
+      examType,
     } = registerDto;
 
     const existingUser = await this.userRepository.findOne({
@@ -49,15 +48,19 @@ export class AuthService {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     const user = this.userRepository.create({
       email,
       passwordHash,
       firstName,
       lastName,
-      phone: phone || null,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      phone,
+      dateOfBirth: new Date(dateOfBirth),
       profession,
-      examTypes,
+      examTypes: [examType],
     });
 
     await this.userRepository.save(user);
@@ -70,6 +73,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        fullName: user.fullName,
         avatarUrl: user.avatarUrl,
         phone: user.phone,
         dateOfBirth: user.dateOfBirth,
@@ -108,6 +112,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        fullName: user.fullName,
         avatarUrl: user.avatarUrl,
         phone: user.phone,
         dateOfBirth: user.dateOfBirth,
@@ -165,6 +170,7 @@ export class AuthService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       phone: user.phone,
       dateOfBirth: user.dateOfBirth,

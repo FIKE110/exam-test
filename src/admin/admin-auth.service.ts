@@ -121,7 +121,7 @@ export class AdminAuthService {
           'JWT_REFRESH_SECRET',
           'refresh-secret-key',
         ),
-      }) as { sub: string; email: string; role: AdminRole };
+      });
 
       const admin = await this.adminRepository.findOne({
         where: { id: payload.sub },

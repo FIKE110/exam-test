@@ -11,6 +11,7 @@ export interface UserResponse {
   email: string;
   firstName: string;
   lastName: string;
+  fullName: string;
   avatarUrl: string | null;
   phone: string | null;
   dateOfBirth: Date | null;

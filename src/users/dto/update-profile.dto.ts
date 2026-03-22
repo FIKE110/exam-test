@@ -3,30 +3,18 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
   @ApiProperty({
-    description: 'User first name',
-    example: 'John',
+    description: 'User full name',
+    example: 'John Doe',
     required: false,
-    minLength: 1,
+    minLength: 2,
     maxLength: 100,
   })
   @IsOptional()
-  @IsString({ message: 'First name must be a string' })
-  @Length(1, 100, {
-    message: 'First name must be between 1 and 100 characters',
+  @IsString({ message: 'Full name must be a string' })
+  @Length(2, 100, {
+    message: 'Full name must be between 2 and 100 characters',
   })
-  firstName?: string;
-
-  @ApiProperty({
-    description: 'User last name',
-    example: 'Doe',
-    required: false,
-    minLength: 1,
-    maxLength: 100,
-  })
-  @IsOptional()
-  @IsString({ message: 'Last name must be a string' })
-  @Length(1, 100, { message: 'Last name must be between 1 and 100 characters' })
-  lastName?: string;
+  fullName?: string;
 
   @ApiProperty({
     description: 'URL to the user avatar image',

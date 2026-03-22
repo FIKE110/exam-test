@@ -38,15 +38,16 @@ export class AuthController {
     description: 'User registration data',
     schema: {
       type: 'object',
-      required: ['name', 'email', 'password'],
+      required: [
+        'email',
+        'password',
+        'fullName',
+        'phone',
+        'dateOfBirth',
+        'profession',
+        'examType',
+      ],
       properties: {
-        name: {
-          type: 'string',
-          example: 'Emma Okonkwo',
-          description: 'Full name (2-100 characters)',
-          minLength: 2,
-          maxLength: 100,
-        },
         email: {
           type: 'string',
           format: 'email',
@@ -57,9 +58,39 @@ export class AuthController {
           type: 'string',
           format: 'password',
           example: 'SecurePassword123!',
-          description:
-            'Password (minimum 8 characters, must include uppercase, lowercase, and number)',
+          description: 'Password (minimum 8 characters)',
           minLength: 8,
+        },
+        fullName: {
+          type: 'string',
+          example: 'Emma Okonkwo',
+          description: 'Full name of the user',
+          minLength: 2,
+          maxLength: 100,
+        },
+        phone: {
+          type: 'string',
+          example: '+2348012345678',
+          description: 'Phone number with country code',
+        },
+        dateOfBirth: {
+          type: 'string',
+          format: 'date',
+          example: '1995-06-15',
+          description: 'Date of birth in ISO 8601 format (YYYY-MM-DD)',
+        },
+        profession: {
+          type: 'string',
+          example: 'STUDENT',
+          description:
+            'Profession code (STUDENT, TEACHER, GRADUATE, PROFESSIONAL)',
+          enum: ['STUDENT', 'TEACHER', 'GRADUATE', 'PROFESSIONAL'],
+        },
+        examType: {
+          type: 'string',
+          example: 'WAEC',
+          description: 'Exam type code',
+          enum: ['WAEC', 'JAMB', 'NECO', 'JUPEB', 'IJMB', 'GCE', 'NABTEB'],
         },
       },
     },
@@ -74,11 +105,17 @@ export class AuthController {
           data: {
             user: {
               id: '550e8400-e29b-41d4-a716-446655440001',
-              name: 'Emma Okonkwo',
+              firstName: 'Emma',
+              lastName: 'Okonkwo',
               email: 'emma.okonkwo@example.com',
               avatarUrl: null,
+              phone: '+2348012345678',
+              dateOfBirth: '1995-06-15',
+              profession: 'STUDENT',
+              examTypes: ['WAEC'],
               subscriptionTier: 'FREE',
-              createdAt: '2026-03-21T10:30:00.000Z',
+              subscriptionStatus: 'ACTIVE',
+              subscriptionExpiresAt: null,
             },
             tokens: {
               accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -104,7 +141,10 @@ export class AuthController {
           items: { type: 'string' },
           example: [
             'email must be an email',
-            'password must be longer than 7 characters',
+            'password must be at least 8 characters',
+            'fullName should not be empty',
+            'phone should not be empty',
+            'dateOfBirth should not be empty',
           ],
         },
         error: { type: 'string', example: 'Bad Request' },
@@ -118,7 +158,7 @@ export class AuthController {
     schema: {
       properties: {
         statusCode: { type: 'number', example: 409 },
-        message: { type: 'string', example: 'Email already exists' },
+        message: { type: 'string', example: 'Email already registered' },
         error: { type: 'string', example: 'Conflict' },
       },
     },

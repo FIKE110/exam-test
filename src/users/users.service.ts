@@ -32,12 +32,10 @@ export class UsersService {
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
     const user = await this.findById(userId);
 
-    if (updateProfileDto.firstName) {
-      user.firstName = updateProfileDto.firstName;
-    }
-
-    if (updateProfileDto.lastName) {
-      user.lastName = updateProfileDto.lastName;
+    if (updateProfileDto.fullName) {
+      const nameParts = updateProfileDto.fullName.trim().split(/\s+/);
+      user.firstName = nameParts[0] || '';
+      user.lastName = nameParts.slice(1).join(' ') || '';
     }
 
     if (updateProfileDto.avatarUrl !== undefined) {

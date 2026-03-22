@@ -23,6 +23,9 @@ export class UserResponseDto {
   @ApiProperty()
   lastName: string;
 
+  @ApiProperty()
+  fullName: string;
+
   @ApiProperty({ nullable: true })
   avatarUrl: string | null;
 

@@ -3,12 +3,10 @@ import {
   IsString,
   MinLength,
   IsNotEmpty,
-  IsOptional,
   IsDateString,
-  IsArray,
   IsEnum,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { ProfessionCode } from '../../common/enums/profession.enum';
 import { ExamTypeCode } from '../../common/enums/exam-type.enum';
 
@@ -34,39 +32,31 @@ export class RegisterDto {
   password!: string;
 
   @ApiProperty({
-    description: 'User first name',
-    example: 'John',
+    description: 'User full name',
+    example: 'John Doe',
     required: true,
   })
-  @IsString({ message: 'First name must be a string' })
-  @IsNotEmpty({ message: 'First name is required' })
-  firstName!: string;
+  @IsString({ message: 'Full name must be a string' })
+  @IsNotEmpty({ message: 'Full name is required' })
+  fullName!: string;
 
   @ApiProperty({
-    description: 'User last name',
-    example: 'Doe',
-    required: true,
-  })
-  @IsString({ message: 'Last name must be a string' })
-  @IsNotEmpty({ message: 'Last name is required' })
-  lastName!: string;
-
-  @ApiPropertyOptional({
     description: 'Phone number',
     example: '+1234567890',
-    required: false,
+    required: true,
   })
-  @IsOptional()
-  phone?: string;
+  @IsNotEmpty({ message: 'Phone number is required' })
+  @IsString({ message: 'Phone number must be a string' })
+  phone!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Date of birth (ISO 8601 format)',
     example: '1995-06-15',
-    required: false,
+    required: true,
   })
-  @IsOptional()
+  @IsNotEmpty({ message: 'Date of birth is required' })
   @IsDateString({}, { message: 'Please provide a valid date' })
-  dateOfBirth?: string;
+  dateOfBirth!: string;
 
   @ApiProperty({
     description: 'Profession code',
@@ -79,14 +69,12 @@ export class RegisterDto {
   profession!: ProfessionCode;
 
   @ApiProperty({
-    description: 'Array of exam type codes',
-    example: ['WAEC', 'JAMB'],
+    description: 'Exam type code',
+    example: 'WAEC',
     required: true,
     enum: ExamTypeCode,
-    isArray: true,
   })
-  @IsArray({ message: 'Exam types must be an array' })
-  @IsEnum(ExamTypeCode, { each: true, message: 'Invalid exam type code' })
-  @IsNotEmpty({ message: 'At least one exam type is required' })
-  examTypes!: ExamTypeCode[];
+  @IsEnum(ExamTypeCode, { message: 'Invalid exam type code' })
+  @IsNotEmpty({ message: 'Exam type is required' })
+  examType!: ExamTypeCode;
 }
