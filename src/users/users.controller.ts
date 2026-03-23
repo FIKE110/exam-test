@@ -4,6 +4,8 @@ import {
   Put,
   Body,
   UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
   Query,
   DefaultValuePipe,
   ParseIntPipe,
@@ -25,6 +27,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Users')
 @Controller('users')
+@UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
@@ -32,20 +35,177 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+    content: {
+      'application/json': {
+        example: {
+          status: true,
+          data: {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            email: 'emma.okonkwo@example.com',
+            fullName: 'Emma Okonkwo',
+            firstName: 'Emma',
+            lastName: 'Okonkwo',
+            phone: '+2348012345678',
+            dateOfBirth: '1995-06-15',
+            profession: 'STUDENT',
+            avatarUrl: 'https://example.com/avatars/emma.jpg',
+            examTypes: ['USMLE', 'PLAB'],
+            subscriptionTier: 'free',
+            subscriptionStatus: 'active',
+            subscriptionExpiresAt: null,
+            emailVerified: true,
+            createdAt: '2026-01-15T10:30:00.000Z',
+            updatedAt: '2026-03-21T14:20:00.000Z',
+          },
+          error: null,
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication required',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
   async getProfile(@CurrentUser('userId') userId: string) {
-    return this.usersService.findById(userId);
+    return this.usersService.getProfile(userId);
   }
 
   @Put('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update user profile' })
-  @ApiBody({ type: UpdateProfileDto })
-  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
-  @ApiResponse({ status: 400, description: 'Validation error' })
-  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiOperation({
+    summary: 'Update user profile',
+    description:
+      'Update profile fields (name, avatar, phone, date of birth, profession). Email cannot be updated via this endpoint.',
+  })
+  @ApiBody({
+    type: UpdateProfileDto,
+    examples: {
+      'Update name and phone': {
+        value: {
+          fullName: 'Emma Okonkwo',
+          phone: '+2348012345678',
+        },
+      },
+      'Update all fields': {
+        value: {
+          fullName: 'Emma Okonkwo',
+          avatarUrl: 'https://example.com/avatars/emma.jpg',
+          phone: '+2348012345678',
+          dateOfBirth: '1995-06-15',
+          profession: 'STUDENT',
+        },
+      },
+      'Update profession only': {
+        value: {
+          profession: 'DOCTOR',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    content: {
+      'application/json': {
+        example: {
+          status: true,
+          data: {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            email: 'emma.okonkwo@example.com',
+            fullName: 'Emma Okonkwo',
+            firstName: 'Emma',
+            lastName: 'Okonkwo',
+            phone: '+2348012345678',
+            dateOfBirth: '1995-06-15',
+            profession: 'STUDENT',
+            avatarUrl: 'https://example.com/avatars/emma.jpg',
+            examTypes: ['USMLE', 'PLAB'],
+            subscriptionTier: 'free',
+            subscriptionStatus: 'active',
+            subscriptionExpiresAt: null,
+            emailVerified: true,
+            createdAt: '2026-01-15T10:30:00.000Z',
+            updatedAt: '2026-03-23T10:30:00.000Z',
+          },
+          error: null,
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'The request validation failed',
+            details: [
+              {
+                field: 'fullName',
+                message: 'Full name must be between 2 and 100 characters',
+              },
+            ],
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication required',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
   async updateProfile(
     @CurrentUser('userId') userId: string,
     @Body() updateProfileDto: UpdateProfileDto,
@@ -56,12 +216,54 @@ export class UsersController {
   @Get('stats')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user statistics' })
+  @ApiOperation({
+    summary: 'Get user statistics',
+    description:
+      'Returns study statistics including questions answered, accuracy, study hours, and streak data.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Statistics retrieved successfully',
+    content: {
+      'application/json': {
+        example: {
+          status: true,
+          data: {
+            totalQuestionsAnswered: 1250,
+            overallAccuracy: 72.5,
+            totalStudyHours: 48,
+            currentStreak: 5,
+            longestStreak: 14,
+          },
+          error: null,
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication required',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
   async getStats(@CurrentUser('userId') userId: string) {
     return this.usersService.getUserStats(userId);
   }
@@ -70,13 +272,108 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiQuery({ name: 'search', required: false, type: String, example: 'john' })
-  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Authentication required' })
-  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiOperation({
+    summary: 'Get all users (Admin only)',
+    description:
+      'Returns a paginated list of all users. Supports search by email or name.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number for pagination',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 20,
+    description: 'Number of items per page',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    example: 'emma',
+    description: 'Search by email, first name, or last name',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Users retrieved successfully',
+    content: {
+      'application/json': {
+        example: {
+          status: true,
+          data: {
+            data: [
+              {
+                id: '550e8400-e29b-41d4-a716-446655440001',
+                email: 'emma.okonkwo@example.com',
+                firstName: 'Emma',
+                lastName: 'Okonkwo',
+                subscriptionTier: 'free',
+                subscriptionStatus: 'active',
+                isAdmin: false,
+                createdAt: '2026-01-15T10:30:00.000Z',
+              },
+            ],
+            pagination: {
+              page: 1,
+              limit: 20,
+              total: 45,
+              total_pages: 3,
+            },
+          },
+          error: null,
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication required',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Admin access required',
+    content: {
+      'application/json': {
+        example: {
+          status: false,
+          data: null,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to access this resource',
+          },
+          meta: {
+            timestamp: '2026-03-23T10:30:00.000Z',
+            request_id: '550e8400-e29b-41d4-a716-446655440002',
+          },
+        },
+      },
+    },
+  })
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,

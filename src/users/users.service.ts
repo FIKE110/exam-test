@@ -29,6 +29,29 @@ export class UsersService {
     });
   }
 
+  async getProfile(userId: string) {
+    const user = await this.findById(userId);
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      dateOfBirth: user.dateOfBirth,
+      profession: user.profession,
+      avatarUrl: user.avatarUrl,
+      examTypes: user.examTypes,
+      subscriptionTier: user.subscriptionTier,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionExpiresAt: user.subscriptionExpiresAt,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
     const user = await this.findById(userId);
 
@@ -42,17 +65,39 @@ export class UsersService {
       user.avatarUrl = updateProfileDto.avatarUrl;
     }
 
+    if (updateProfileDto.phone !== undefined) {
+      user.phone = updateProfileDto.phone;
+    }
+
+    if (updateProfileDto.dateOfBirth !== undefined) {
+      user.dateOfBirth = updateProfileDto.dateOfBirth
+        ? new Date(updateProfileDto.dateOfBirth)
+        : null;
+    }
+
+    if (updateProfileDto.profession !== undefined) {
+      user.profession = updateProfileDto.profession;
+    }
+
     await this.userRepository.save(user);
 
     return {
       id: user.id,
       email: user.email,
+      fullName: user.fullName,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      dateOfBirth: user.dateOfBirth,
+      profession: user.profession,
       avatarUrl: user.avatarUrl,
+      examTypes: user.examTypes,
       subscriptionTier: user.subscriptionTier,
       subscriptionStatus: user.subscriptionStatus,
       subscriptionExpiresAt: user.subscriptionExpiresAt,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 
