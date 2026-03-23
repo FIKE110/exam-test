@@ -78,14 +78,22 @@ export class DiscussionsService {
       .take(limit)
       .getManyAndCount();
 
-    const answerCounts = await Promise.all(
-      posts.map(async (post) => {
-        const count = await this.answerRepository.count({
-          where: { postId: post.id },
-        });
-        return { postId: post.id, count };
-      }),
-    );
+    const postIds = posts.map((p) => p.id);
+    const answerCountsMap = new Map<string, number>();
+
+    if (postIds.length > 0) {
+      const counts = await this.answerRepository
+        .createQueryBuilder('answer')
+        .select('answer.post_id', 'postId')
+        .addSelect('COUNT(*)', 'count')
+        .where('answer.post_id IN (:...postIds)', { postIds })
+        .groupBy('answer.post_id')
+        .getRawMany<{ postId: string; count: string }>();
+
+      for (const row of counts) {
+        answerCountsMap.set(row.postId, parseInt(row.count, 10));
+      }
+    }
 
     const data = posts.map((post) => ({
       id: post.id,
@@ -106,7 +114,7 @@ export class DiscussionsService {
       views: post.views,
       upvotes: post.upvotes,
       isAnswered: post.isAnswered,
-      answerCount: answerCounts.find((a) => a.postId === post.id)?.count || 0,
+      answerCount: answerCountsMap.get(post.id) || 0,
       createdAt: post.createdAt,
     }));
 
@@ -134,8 +142,7 @@ export class DiscussionsService {
       throw new NotFoundException('Post not found');
     }
 
-    post.views += 1;
-    await this.postRepository.save(post);
+    await this.postRepository.increment({ id: postId }, 'views', 1);
 
     const answers = await this.answerRepository.find({
       where: { postId },
@@ -190,7 +197,7 @@ export class DiscussionsService {
           ? { id: post.course.id, title: post.course.title }
           : null,
         tags: post.tags,
-        views: post.views,
+        views: post.views + 1,
         upvotes: post.upvotes,
         isAnswered: post.isAnswered,
         answers: answersWithComments,
@@ -448,13 +455,12 @@ export class DiscussionsService {
       throw new NotFoundException('Post not found');
     }
 
-    post.upvotes += 1;
-    await this.postRepository.save(post);
+    await this.postRepository.increment({ id: postId }, 'upvotes', 1);
 
     return {
       status: true,
       data: {
-        upvotes: post.upvotes,
+        upvotes: post.upvotes + 1,
       },
     };
   }
@@ -468,13 +474,12 @@ export class DiscussionsService {
       throw new NotFoundException('Answer not found');
     }
 
-    answer.upvotes += 1;
-    await this.answerRepository.save(answer);
+    await this.answerRepository.increment({ id: answerId }, 'upvotes', 1);
 
     return {
       status: true,
       data: {
-        upvotes: answer.upvotes,
+        upvotes: answer.upvotes + 1,
       },
     };
   }

@@ -117,10 +117,7 @@ export class AdminAuthService {
   async refreshTokens(refreshToken: string): Promise<AdminTokens> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get(
-          'JWT_REFRESH_SECRET',
-          'refresh-secret-key',
-        ),
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
       });
 
       const admin = await this.adminRepository.findOne({
@@ -153,14 +150,11 @@ export class AdminAuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get('JWT_SECRET', 'your-secret-key'),
+        secret: this.configService.getOrThrow('JWT_SECRET'),
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get(
-          'JWT_REFRESH_SECRET',
-          'refresh-secret-key',
-        ),
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
         expiresIn: '7d',
       }),
     ]);

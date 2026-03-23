@@ -10,7 +10,7 @@ import { DomainService } from './domain.service';
 import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Domain Reference')
-@Controller('api/domain')
+@Controller('domain')
 export class DomainController {
   constructor(private readonly domainService: DomainService) {}
 

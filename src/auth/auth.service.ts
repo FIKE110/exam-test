@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
+import { Admin } from '../admin/entities/admin.entity';
+import { UserStreak } from '../progress/entities/user-streak.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokens, AuthResponse } from './interfaces/auth.interface';
@@ -22,6 +24,10 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Admin)
+    private adminRepository: Repository<Admin>,
+    @InjectRepository(UserStreak)
+    private userStreakRepository: Repository<UserStreak>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -65,9 +71,10 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    const tokens = await this.generateTokens(user, false);
+    const tokens = await this.generateTokens(user, false, 'user');
 
     return {
+      role: 'user',
       user: {
         id: user.id,
         email: user.email,
@@ -90,40 +97,65 @@ export class AuthService {
   async login(loginDto: LoginDto, rememberMe = false): Promise<AuthResponse> {
     const { email, password } = loginDto;
 
+    // Try user first
     const user = await this.userRepository.findOne({
       where: { email },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (user) {
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+      if (isPasswordValid) {
+        const tokens = await this.generateTokens(user, rememberMe, 'user');
+        return {
+          role: 'user',
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            fullName: user.fullName,
+            avatarUrl: user.avatarUrl,
+            phone: user.phone,
+            dateOfBirth: user.dateOfBirth,
+            profession: user.profession,
+            examTypes: user.examTypes,
+            subscriptionTier: user.subscriptionTier,
+            subscriptionStatus: user.subscriptionStatus,
+            subscriptionExpiresAt: user.subscriptionExpiresAt,
+          },
+          tokens,
+        };
+      }
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    // Try admin
+    const admin = await this.adminRepository.findOne({
+      where: { email },
+    });
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (admin) {
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        admin.passwordHash,
+      );
+
+      if (isPasswordValid && admin.isActive) {
+        const tokens = await this.generateTokens(admin, rememberMe, 'admin');
+        return {
+          role: 'admin',
+          admin: {
+            id: admin.id,
+            email: admin.email,
+            username: admin.username,
+            role: admin.role,
+          },
+          tokens,
+        };
+      }
     }
 
-    const tokens = await this.generateTokens(user, rememberMe);
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: user.fullName,
-        avatarUrl: user.avatarUrl,
-        phone: user.phone,
-        dateOfBirth: user.dateOfBirth,
-        profession: user.profession,
-        examTypes: user.examTypes,
-        subscriptionTier: user.subscriptionTier,
-        subscriptionStatus: user.subscriptionStatus,
-        subscriptionExpiresAt: user.subscriptionExpiresAt,
-      },
-      tokens,
-    };
+    throw new UnauthorizedException('Invalid credentials');
   }
 
   async refreshTokens(
@@ -132,11 +164,20 @@ export class AuthService {
   ): Promise<AuthTokens> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get(
-          'JWT_REFRESH_SECRET',
-          'refresh-secret-key',
-        ),
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
       });
+
+      if (payload.accountType === 'admin') {
+        const admin = await this.adminRepository.findOne({
+          where: { id: payload.sub },
+        });
+
+        if (!admin || !admin.isActive) {
+          throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        return this.generateTokens(admin, rememberMe, 'admin');
+      }
 
       const user = await this.userRepository.findOne({
         where: { id: payload.sub },
@@ -146,14 +187,16 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      return this.generateTokens(user, rememberMe);
+      return this.generateTokens(user, rememberMe, 'user');
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
   async logout(userId: string): Promise<void> {
-    return;
+    // Note: Access tokens remain valid until expiry (15 min).
+    // For full invalidation, implement a token blacklist with Redis.
+    await Promise.resolve();
   }
 
   async getMe(userId: string) {
@@ -164,6 +207,10 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+
+    const streak = await this.userStreakRepository.findOne({
+      where: { userId },
+    });
 
     return {
       id: user.id,
@@ -179,20 +226,21 @@ export class AuthService {
       subscriptionTier: user.subscriptionTier,
       subscriptionStatus: user.subscriptionStatus,
       subscriptionExpiresAt: user.subscriptionExpiresAt,
-      currentStreak: 0,
-      longestStreak: 0,
+      currentStreak: streak?.currentStreak ?? 0,
+      longestStreak: streak?.longestStreak ?? 0,
     };
   }
 
   private async generateTokens(
-    user: User,
+    account: User | Admin,
     rememberMe: boolean,
+    accountType: 'user' | 'admin',
   ): Promise<AuthTokens> {
     const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
+      sub: account.id,
+      email: account.email,
+      role: (account as any).role || 'user',
+      accountType,
       rememberMe,
     };
 
@@ -202,14 +250,11 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get('JWT_SECRET', 'your-secret-key'),
+        secret: this.configService.getOrThrow('JWT_SECRET'),
         expiresIn: this.ACCESS_TOKEN_EXPIRY,
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get(
-          'JWT_REFRESH_SECRET',
-          'refresh-secret-key',
-        ),
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
         expiresIn: refreshTokenExpiry,
       }),
     ]);

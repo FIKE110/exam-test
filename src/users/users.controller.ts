@@ -102,26 +102,53 @@ export class UsersController {
       'Update profile fields (name, avatar, phone, date of birth, profession). Email cannot be updated via this endpoint.',
   })
   @ApiBody({
-    type: UpdateProfileDto,
-    examples: {
-      'Update name and phone': {
-        value: {
-          fullName: 'Emma Okonkwo',
-          phone: '+2348012345678',
+    description:
+      'Profile fields to update. All fields are optional. Email cannot be changed.',
+    schema: {
+      type: 'object',
+      properties: {
+        fullName: {
+          type: 'string',
+          example: 'Emma Okonkwo',
+          description: 'User full name (2-100 characters)',
+          minLength: 2,
+          maxLength: 100,
         },
-      },
-      'Update all fields': {
-        value: {
-          fullName: 'Emma Okonkwo',
-          avatarUrl: 'https://example.com/avatars/emma.jpg',
-          phone: '+2348012345678',
-          dateOfBirth: '1995-06-15',
-          profession: 'STUDENT',
+        avatarUrl: {
+          type: 'string',
+          format: 'uri',
+          example: 'https://example.com/avatars/emma.jpg',
+          description: 'URL to the user avatar image',
         },
-      },
-      'Update profession only': {
-        value: {
-          profession: 'DOCTOR',
+        phone: {
+          type: 'string',
+          example: '+2348012345678',
+          description: 'User phone number (7-20 characters)',
+          minLength: 7,
+          maxLength: 20,
+        },
+        dateOfBirth: {
+          type: 'string',
+          format: 'date',
+          example: '1995-06-15',
+          description: 'User date of birth (ISO 8601 format YYYY-MM-DD)',
+        },
+        profession: {
+          type: 'string',
+          enum: [
+            'STUDENT',
+            'DOCTOR',
+            'NURSE',
+            'ENGINEER',
+            'TEACHER',
+            'ACCOUNTANT',
+            'IT_PROFESSIONAL',
+            'LAWYER',
+            'BUSINESS_PROFESSIONAL',
+            'OTHER',
+          ],
+          example: 'STUDENT',
+          description: 'User profession code',
         },
       },
     },

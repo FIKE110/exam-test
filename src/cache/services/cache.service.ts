@@ -15,7 +15,7 @@ export class CacheService implements OnModuleDestroy {
   constructor(private configService: ConfigService) {
     const redisUrl = this.configService.get('REDIS_URL');
 
-    if (redisUrl && redisUrl !== 'redis://localhost:6379') {
+    if (redisUrl) {
       try {
         this.redis = new Redis(redisUrl, {
           maxRetriesPerRequest: 3,

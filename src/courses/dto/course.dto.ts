@@ -7,6 +7,8 @@ import {
   IsEnum,
   IsNumber,
   IsBoolean,
+  Min,
+  Max,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CourseCategory } from '../entities/course.entity';
@@ -145,6 +147,8 @@ export class UpdateProgressDto {
   })
   @IsOptional()
   @IsNumber()
+  @Min(0, { message: 'Progress percentage must be at least 0' })
+  @Max(100, { message: 'Progress percentage must be at most 100' })
   progressPercentage?: number;
 
   @ApiProperty({
@@ -155,6 +159,7 @@ export class UpdateProgressDto {
   })
   @IsOptional()
   @IsNumber()
+  @Min(0, { message: 'Time spent must be at least 0' })
   timeSpentMinutes?: number;
 
   @ApiProperty({

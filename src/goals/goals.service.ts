@@ -288,10 +288,10 @@ export class GoalsService {
       throw new NotFoundException('Goal not found');
     }
 
-    if (dto.name) goal.name = dto.name;
+    if (dto.name !== undefined) goal.name = dto.name;
     if (dto.description !== undefined)
       goal.description = dto.description ?? null;
-    if (dto.targetValue) goal.targetValue = dto.targetValue;
+    if (dto.targetValue !== undefined) goal.targetValue = dto.targetValue;
 
     await this.goalRepository.save(goal);
 

@@ -171,9 +171,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Public()
   @ApiOperation({
-    summary: 'Login with email and password',
+    summary: 'Login with email and password (User or Admin)',
     description:
-      'Authenticates a user with email and password credentials. Returns access and refresh tokens. Access tokens expire in 15 minutes (or 7 days if rememberMe is true). Refresh tokens expire in 7 days (or 30 days if rememberMe is true).',
+      'Authenticates a user or admin with email and password credentials. The endpoint checks the users table first, then the admins table. Returns access and refresh tokens along with a `role` field indicating "user" or "admin". Access tokens expire in 15 minutes (or 7 days if rememberMe is true). Refresh tokens expire in 7 days (or 30 days if rememberMe is true).',
   })
   @ApiBody({
     description: 'Login credentials',
@@ -185,12 +185,12 @@ export class AuthController {
           type: 'string',
           format: 'email',
           example: 'emma.okonkwo@example.com',
-          description: 'Registered email address',
+          description: 'Registered email address (user or admin)',
         },
         password: {
           type: 'string',
           example: 'SecurePassword123!',
-          description: 'User password',
+          description: 'Account password',
         },
         rememberMe: {
           type: 'boolean',
@@ -203,28 +203,66 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Successfully logged in',
+    description: 'Successfully logged in as user',
     content: {
       'application/json': {
-        example: {
-          status: true,
-          data: {
-            user: {
-              id: '550e8400-e29b-41d4-a716-446655440001',
-              name: 'Emma Okonkwo',
-              email: 'emma.okonkwo@example.com',
-              avatarUrl: 'https://example.com/avatars/550e8400.jpg',
-              subscriptionTier: 'PREMIUM',
-              createdAt: '2026-01-15T10:00:00.000Z',
-            },
-            tokens: {
-              accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        examples: {
+          'User login': {
+            summary: 'Successful user login',
+            value: {
+              status: true,
+              data: {
+                role: 'user',
+                user: {
+                  id: '550e8400-e29b-41d4-a716-446655440001',
+                  email: 'emma.okonkwo@example.com',
+                  firstName: 'Emma',
+                  lastName: 'Okonkwo',
+                  fullName: 'Emma Okonkwo',
+                  avatarUrl: 'https://example.com/avatars/550e8400.jpg',
+                  phone: '+2348012345678',
+                  dateOfBirth: '1995-06-15',
+                  profession: 'STUDENT',
+                  examTypes: ['WAEC'],
+                  subscriptionTier: 'free',
+                  subscriptionStatus: 'active',
+                  subscriptionExpiresAt: null,
+                },
+                tokens: {
+                  accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                  refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                },
+              },
+              error: null,
+              meta: {
+                timestamp: '2026-03-21T10:30:00.000Z',
+                request_id: '550e8400-e29b-41d4-a716-446655440003',
+              },
             },
           },
-          meta: {
-            timestamp: '2026-03-21T10:30:00.000Z',
-            request_id: '550e8400-e29b-41d4-a716-446655440003',
+          'Admin login': {
+            summary: 'Successful admin login',
+            value: {
+              status: true,
+              data: {
+                role: 'admin',
+                admin: {
+                  id: '660e8400-e29b-41d4-a716-446655440001',
+                  email: 'admin@example.com',
+                  username: 'superadmin',
+                  role: 'super_admin',
+                },
+                tokens: {
+                  accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                  refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                },
+              },
+              error: null,
+              meta: {
+                timestamp: '2026-03-21T10:30:00.000Z',
+                request_id: '550e8400-e29b-41d4-a716-446655440004',
+              },
+            },
           },
         },
       },

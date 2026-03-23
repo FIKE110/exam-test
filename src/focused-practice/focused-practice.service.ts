@@ -166,8 +166,6 @@ export class FocusedPracticeService {
       id: q.id,
       questionText: q.questionText,
       options: q.options,
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation,
     }));
 
     return {

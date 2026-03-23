@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsDateString,
   IsEnum,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProfessionCode } from '../../common/enums/profession.enum';
@@ -21,14 +22,19 @@ export class RegisterDto {
   email!: string;
 
   @ApiProperty({
-    description: 'User password (minimum 8 characters)',
-    example: 'SecurePass123!',
+    description:
+      'User password (minimum 8 characters, must include uppercase, lowercase, number)',
+    example: 'SecurePass123',
     required: true,
     minLength: 8,
   })
   @IsNotEmpty({ message: 'Password is required' })
   @IsString({ message: 'Password must be a string' })
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message:
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+  })
   password!: string;
 
   @ApiProperty({

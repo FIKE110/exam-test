@@ -24,9 +24,11 @@ import { PracticeSession } from '../practice/entities/practice-session.entity';
 import { DiscussionPost } from '../discussions/entities/discussion-post.entity';
 import { DiscussionAnswer } from '../discussions/entities/discussion-answer.entity';
 import { JwtStrategy } from '../auth/strategies/jwt.strategy';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       Admin,
       User,
@@ -41,7 +43,7 @@ import { JwtStrategy } from '../auth/strategies/jwt.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET', 'your-secret-key'),
+        secret: configService.getOrThrow('JWT_SECRET'),
         signOptions: {
           expiresIn: '15m',
         },
@@ -62,7 +64,6 @@ import { JwtStrategy } from '../auth/strategies/jwt.strategy';
     AdminDashboardService,
     AdminQuestionsService,
     AdminSettingsService,
-    JwtStrategy,
   ],
   exports: [AdminAuthService],
 })

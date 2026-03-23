@@ -290,7 +290,34 @@ export class FileController {
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {
+    const allowedFolders = ['avatars', 'materials'];
+    if (!allowedFolders.includes(folder)) {
+      return res
+        .status(404)
+        .json({ statusCode: 404, message: 'File not found' });
+    }
+
+    if (
+      subfolder.includes('..') ||
+      filename.includes('..') ||
+      subfolder.includes('/') ||
+      filename.includes('/')
+    ) {
+      return res
+        .status(404)
+        .json({ statusCode: 404, message: 'File not found' });
+    }
+
     const filePath = path.join('./uploads', folder, subfolder, filename);
+    const resolved = path.resolve(filePath);
+    const uploadsRoot = path.resolve('./uploads');
+
+    if (!resolved.startsWith(uploadsRoot)) {
+      return res
+        .status(404)
+        .json({ statusCode: 404, message: 'File not found' });
+    }
+
     res.sendFile(filePath, { root: '.' });
   }
 }

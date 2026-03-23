@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { User } from '../users/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
@@ -101,12 +102,6 @@ export class AuthPasswordService {
   }
 
   private generateToken(): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = '';
-    for (let i = 0; i < 64; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
+    return crypto.randomBytes(32).toString('hex');
   }
 }

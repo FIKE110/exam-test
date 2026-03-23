@@ -20,11 +20,11 @@ export class MockQuestionDto {
   @ApiProperty({ type: MockQuestionOptionDto, isArray: true })
   options: MockQuestionOptionDto[];
 
-  @ApiProperty({ example: 'A' })
-  correctAnswer: string;
+  @ApiPropertyOptional({ example: 'A' })
+  correctAnswer?: string;
 
-  @ApiProperty({ example: 'Basic arithmetic shows 2 + 2 = 4' })
-  explanation: string;
+  @ApiPropertyOptional({ example: 'Basic arithmetic shows 2 + 2 = 4' })
+  explanation?: string;
 }
 
 export class PracticeSessionResponseDto {

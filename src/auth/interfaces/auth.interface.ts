@@ -22,7 +22,16 @@ export interface UserResponse {
   subscriptionExpiresAt: Date | null;
 }
 
+export interface AdminResponse {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
 export interface AuthResponse {
-  user: UserResponse;
+  role: 'user' | 'admin';
+  user?: UserResponse;
+  admin?: AdminResponse;
   tokens: AuthTokens;
 }

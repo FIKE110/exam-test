@@ -198,16 +198,16 @@ export class AdminDashboardService {
       this.practiceSessionRepository.count({
         where: { status: SessionStatus.COMPLETED },
       }),
-      this.questionRepository.find({
-        where: { createdAt: weekAgo as any },
-        take: 100,
-      }),
+      this.questionRepository
+        .createQueryBuilder('question')
+        .where('question.createdAt >= :weekAgo', { weekAgo })
+        .getCount(),
       this.getSessionsByDay(weekAgo),
     ]);
 
     return {
       weeklyPracticeSessions: weeklySessions,
-      weeklyQuestionsAdded: weeklyQuestions.length,
+      weeklyQuestionsAdded: weeklyQuestions,
       sessionsByDay,
     };
   }
