@@ -56,6 +56,10 @@ jobs:
                     tar -xzf app.tar.gz
                     echo "Installing pnpm..."
                     npm install -g pnpm
+                    echo "${{ secrets.ENV_FILE }}" > .env
+                    echo "dotenv" > .envrc
+                    direnv allow
+                    direnv reload
                     echo "Installing production deps..."
                     pnpm install --prod --frozen-lockfile
                     echo "Restarting app..."
