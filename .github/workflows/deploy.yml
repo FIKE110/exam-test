@@ -60,5 +60,5 @@ jobs:
                     echo "Installing production deps..."
                     pnpm install --prod --frozen-lockfile
                     echo "Restarting app..."
-                    pm2 restart nest-app || pm2 start dist/main.js --name nest-app
+                    pm2 restart nest-app || pm2 start dist/main.js --interpreter /home/my-app/.nvm/versions/node/v24.14.1/bin/node --name nest-app
                     echo "Done"
