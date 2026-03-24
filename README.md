@@ -2,6 +2,7 @@
 
 A comprehensive backend API for an exam preparation platform with AI-powered study assistance, practice tests, mock exams, and progress tracking.
 
+
 ## Quick Reference
 
 - **Start Development**: `pnpm start:dev`
