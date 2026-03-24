@@ -1,0 +1,64 @@
+name: Deploy Nestjs app
+
+on: 
+    push: 
+        branches: 
+            - main
+
+
+jobs:
+    build-and-deloy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with: 
+                node-version: 18
+                cache: 'pnpm'
+            
+            - name: Install pnpm
+              run: npm install -g pnpm
+            
+            - name: Install dependecies
+              run: pnpm install --frozen-lockfile
+            
+            - name: build project
+              run: pnpm build
+            
+            - name: Create artifact
+              run: |
+                tar -czf app.tar.gz dist package.json pnpm-lock.yaml
+
+            - name: Copy files to server
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                host: ${{ secrets.SERVER_IP }}
+                username: ${{ secrets.SERVER_USER }}
+                password: ${{ secrets.SSH_PASSWORD }}
+                source: "app.tar.gz"
+                target: "/home/${{ secrets.SERVER_USER }}/app"
+
+            - name: Deploy via SSH
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                host: ${{ secrets.SERVER_IP }}
+                username: ${{ secrets.SERVER_USER }}
+                password: ${{ secrets.SSH_PASSWORD }}
+
+                script: |
+                    cd /home/${{ secrets.SERVER_USER }}/app
+                    echo "Cleaning old build..."
+                    rm -rf dist
+                    echo "Extracting..."
+                    tar -xzf app.tar.gz
+                    echo "Installing pnpm..."
+                    npm install -g pnpm
+                    echo "Installing production deps..."
+                    pnpm install --prod --frozen-lockfile
+                    echo "Restarting app..."
+                    pm2 restart nest-app || pm2 start dist/main.js --name nest-app
+                    echo "Done"
