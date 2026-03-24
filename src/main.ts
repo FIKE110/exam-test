@@ -20,9 +20,13 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // Enable CORS
+  const corsOrigin = process.env.CORS_ORIGIN || '*';
+  const parsedOrigin =
+    corsOrigin === '*' ? '*' : corsOrigin.split(',').map((o) => o.trim());
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
-    credentials: true,
+    origin: parsedOrigin,
+    credentials: corsOrigin !== '*',
   });
 
   // Global interceptors
