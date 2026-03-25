@@ -1,12 +1,13 @@
 import {
   ValidationPipe as NestValidationPipe,
   ValidationError,
+  BadRequestException,
 } from '@nestjs/common';
 
 export const validationPipeConfig = new NestValidationPipe({
-  whitelist: true, // Strip properties that don't have decorators
-  forbidNonWhitelisted: true, // Throw error if non-whitelisted properties are present
-  transform: true, // Transform payloads to DTO instances
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
   transformOptions: {
     enableImplicitConversion: true,
   },
@@ -32,9 +33,10 @@ export const validationPipeConfig = new NestValidationPipe({
       return result;
     };
 
-    return {
+    throw new BadRequestException({
+      statusCode: 400,
       message: 'Validation failed',
       errors: formatErrors(errors),
-    };
+    });
   },
 });

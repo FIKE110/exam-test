@@ -28,6 +28,7 @@ async function bootstrap() {
   origin: '*', // Allow any domain
   methods: '*', // Allow any HTTP method (GET, POST, etc.)
   allowedHeaders: '*', // Allow any request headers
+  
 });
   // Global interceptors
   app.useGlobalInterceptors(new TransformInterceptor());

@@ -46,15 +46,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exceptionResponse !== null
       ) {
         const errorObj = exceptionResponse as any;
-        message = errorObj.message || message;
 
-        // Handle validation errors
-        if (errorObj.message && Array.isArray(errorObj.message)) {
+        // Handle our custom validation format: { message: string, errors: [{field, message}] }
+        if (errorObj.errors && Array.isArray(errorObj.errors)) {
+          details = errorObj.errors;
+          message = errorObj.message || 'Validation failed';
+          errorCode = 'VALIDATION_ERROR';
+        }
+        // Handle NestJS default validation format: { message: string[] }
+        else if (errorObj.message && Array.isArray(errorObj.message)) {
           details = errorObj.message.map((msg: string) => ({ message: msg }));
           message = 'Validation failed';
           errorCode = 'VALIDATION_ERROR';
-        } else if (errorObj.error) {
-          errorCode = this.mapHttpStatusToErrorCode(status);
+        } else {
+          message = errorObj.message || message;
+          if (errorObj.error) {
+            errorCode = this.mapHttpStatusToErrorCode(status);
+          }
         }
       }
     } else if (exception instanceof Error) {
