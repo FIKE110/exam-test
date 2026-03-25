@@ -25,10 +25,10 @@ async function bootstrap() {
     corsOrigin === '*' ? '*' : corsOrigin.split(',').map((o) => o.trim());
 
   app.enableCors({
-    origin: parsedOrigin,
-    credentials: corsOrigin !== '*',
-  });
-
+  origin: '*', // Allow any domain
+  methods: '*', // Allow any HTTP method (GET, POST, etc.)
+  allowedHeaders: '*', // Allow any request headers
+});
   // Global interceptors
   app.useGlobalInterceptors(new TransformInterceptor());
 
