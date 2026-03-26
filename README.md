@@ -14,7 +14,6 @@ A comprehensive backend API for an exam preparation platform with AI-powered stu
 ---
 
 ## Table of Contents
-
 1. [Authentication](#authentication)
 2. [Courses](#courses)
 3. [Focused Practice](#focused-practice)
