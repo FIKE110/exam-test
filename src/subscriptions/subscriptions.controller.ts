@@ -16,6 +16,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
+import { SubscribeDto } from './dto/subscribe.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -217,7 +218,7 @@ export class SubscriptionsController {
   @ApiResponse({ status: 401, description: 'Authentication required' })
   async subscribe(
     @CurrentUser('userId') userId: string,
-    @Body() subscribeDto: { planId: string },
+    @Body() subscribeDto: SubscribeDto,
   ) {
     const subscription = await this.subscriptionsService.subscribe(
       userId,

@@ -103,7 +103,7 @@ export class UsersController {
   })
   @ApiBody({
     description:
-      'Profile fields to update. All fields are optional. Email cannot be changed.',
+      'Profile fields to update. All fields are optional. Email cannot be changed. Avatar should be uploaded via /upload/avatar endpoint.',
     schema: {
       type: 'object',
       properties: {
@@ -113,12 +113,6 @@ export class UsersController {
           description: 'User full name (2-100 characters)',
           minLength: 2,
           maxLength: 100,
-        },
-        avatarUrl: {
-          type: 'string',
-          format: 'uri',
-          example: 'https://example.com/avatars/emma.jpg',
-          description: 'URL to the user avatar image',
         },
         phone: {
           type: 'string',

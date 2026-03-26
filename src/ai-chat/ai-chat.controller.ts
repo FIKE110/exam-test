@@ -7,6 +7,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AiChatService } from './ai-chat.service';
+import { ChatRequestDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -62,7 +63,7 @@ export class AiChatController {
   @ApiResponse({ status: 401, description: 'Authentication required' })
   async chat(
     @CurrentUser('userId') userId: string,
-    @Body() chatRequest: { prompt: string },
+    @Body() chatRequest: ChatRequestDto,
   ): Promise<{
     status: boolean;
     data: { reply: string; sessionId: string; messageCount: number };

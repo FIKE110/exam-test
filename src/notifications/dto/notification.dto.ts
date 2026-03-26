@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
+  IsBoolean,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -154,5 +155,6 @@ export class MarkNotificationReadDto {
     required: false,
   })
   @IsOptional()
+  @IsBoolean({ message: 'isRead must be a boolean' })
   isRead?: boolean;
 }

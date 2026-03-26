@@ -61,10 +61,6 @@ export class UsersService {
       user.lastName = nameParts.slice(1).join(' ') || '';
     }
 
-    if (updateProfileDto.avatarUrl !== undefined) {
-      user.avatarUrl = updateProfileDto.avatarUrl;
-    }
-
     if (updateProfileDto.phone !== undefined) {
       user.phone = updateProfileDto.phone;
     }
@@ -150,6 +146,12 @@ export class UsersService {
         total_pages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async updateAvatarUrl(userId: string, avatarUrl: string): Promise<void> {
+    const user = await this.findById(userId);
+    user.avatarUrl = avatarUrl;
+    await this.userRepository.save(user);
   }
 
   async updateSubscription(

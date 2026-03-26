@@ -17,6 +17,8 @@ import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { DiscussionsModule } from './discussions/discussions.module';
+import { CodesModule } from './codes/codes.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { DiscussionsModule } from './discussions/discussions.module';
     NotificationsModule,
     SubscriptionsModule,
     DiscussionsModule,
+    CodesModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

@@ -31,6 +31,8 @@ import {
   AdminRegisterDto,
   RefreshTokenDto,
 } from './dto/admin-auth.dto';
+import { UpdateUserStatusDto } from './dto/admin-users.dto';
+import { UpdateSettingsDto } from './dto/admin-settings.dto';
 import {
   CreateQuestionDto,
   UpdateQuestionDto,
@@ -236,8 +238,8 @@ export class AdminAuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refresh(@Body('refresh_token') refreshToken: string) {
-    const tokens = await this.adminAuthService.refreshTokens(refreshToken);
+  async refresh(@Body() dto: RefreshTokenDto) {
+    const tokens = await this.adminAuthService.refreshTokens(dto.refresh_token);
     return { tokens };
   }
 }
@@ -493,9 +495,9 @@ export class AdminUsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateUserStatus(
     @Param('id') id: string,
-    @Body('status') status: 'active' | 'suspended',
+    @Body() dto: UpdateUserStatusDto,
   ) {
-    return this.adminUsersService.updateUserStatus(id, status);
+    return this.adminUsersService.updateUserStatus(id, dto.status);
   }
 }
 
@@ -1220,8 +1222,10 @@ export class AdminSettingsController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Authentication required' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
-  async updateSettings(@Body() updates: Record<string, string>) {
-    const settings = await this.adminSettingsService.updateSettings(updates);
+  async updateSettings(@Body() updates: UpdateSettingsDto) {
+    const settings = await this.adminSettingsService.updateSettings(
+      updates as any,
+    );
     return { status: true, data: settings };
   }
 

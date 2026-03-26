@@ -17,6 +17,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -283,7 +284,7 @@ export class AuthController {
       },
     },
   })
-  async login(@Body() loginDto: LoginDto & { rememberMe?: boolean }) {
+  async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto, loginDto.rememberMe || false);
   }
 
@@ -345,13 +346,10 @@ export class AuthController {
       },
     },
   })
-  async refresh(
-    @Body('refresh_token') refreshToken: string,
-    @Body('rememberMe') rememberMe?: boolean,
-  ) {
+  async refresh(@Body() dto: RefreshTokenDto) {
     const tokens = await this.authService.refreshTokens(
-      refreshToken,
-      rememberMe || false,
+      dto.refresh_token,
+      dto.rememberMe || false,
     );
     return { tokens };
   }

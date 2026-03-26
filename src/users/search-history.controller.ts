@@ -17,12 +17,27 @@ import {
   ApiBody,
   ApiParam,
 } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  MaxLength,
+} from 'class-validator';
 import { SearchHistoryService } from './search-history.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 class AddSearchRequestDto {
-  query: string;
+  @IsString({ message: 'Query must be a string' })
+  @IsNotEmpty({ message: 'Query is required' })
+  @MaxLength(255, { message: 'Query must not exceed 255 characters' })
+  query!: string;
+
+  @IsOptional()
+  @IsEnum(['course', 'question', 'discussion', 'material'], {
+    message: 'Type must be one of: course, question, discussion, material',
+  })
   type?: string;
 }
 

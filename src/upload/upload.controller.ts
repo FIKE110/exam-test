@@ -24,10 +24,13 @@ import * as path from 'path';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UploadService, FileCategory } from './services/upload.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
 
 class UploadAvatarResponseDto {
-  status: boolean;
-  data: {
+  status!: boolean;
+  data!: {
     url: string;
     key: string;
   };
@@ -38,8 +41,8 @@ class UploadAvatarResponseDto {
 }
 
 class UploadMaterialResponseDto {
-  status: boolean;
-  data: {
+  status!: boolean;
+  data!: {
     url: string;
     key: string;
     filename: string;
@@ -56,14 +59,18 @@ class UploadMaterialResponseDto {
 @ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
-  constructor(private uploadService: UploadService) {}
+  constructor(
+    private uploadService: UploadService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
   @Post('avatar')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 2 * 1024 * 1024 },
       fileFilter: (req, file, callback) => {
         if (!file.mimetype.startsWith('image/')) {
           return callback(new Error('Only image files are allowed'), false);
@@ -82,7 +89,7 @@ export class UploadController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Image file (JPEG, PNG, GIF, WebP - max 5MB)',
+          description: 'Image file (JPEG, PNG, GIF, WebP - max 2MB)',
         },
       },
     },
@@ -90,7 +97,7 @@ export class UploadController {
   @ApiOperation({
     summary: 'Upload user avatar',
     description:
-      'Uploads a profile picture for the authenticated user. Supported formats: JPEG, PNG, GIF, WebP. Maximum file size: 5MB. If a previous avatar exists, it will be replaced.',
+      'Uploads a profile picture for the authenticated user. Supported formats: JPEG, PNG, GIF, WebP. Maximum file size: 2MB. If a previous avatar exists, it will be replaced. The uploaded URL is automatically saved to the user profile.',
   })
   @ApiResponse({
     status: 200,
@@ -140,6 +147,7 @@ export class UploadController {
       FileCategory.AVATAR,
       userId,
     );
+    await this.userRepository.update(userId, { avatarUrl: result.url });
     return {
       status: true,
       data: result,

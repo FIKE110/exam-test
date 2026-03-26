@@ -18,26 +18,11 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
+import { CreateNotificationForUserDto } from './dto/notification.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-
-class CreateNotificationRequestDto {
-  userId: string;
-  title: string;
-  message: string;
-  tag?:
-    | 'admin'
-    | 'system'
-    | 'user'
-    | 'course'
-    | 'exam'
-    | 'progress'
-    | 'subscription'
-    | 'general';
-  actionUrl?: string;
-}
 
 class CreateNotificationResponseDto {
   status: boolean;
@@ -206,7 +191,7 @@ export class NotificationsController {
     status: 403,
     description: 'Admin access required - User is not an admin',
   })
-  async create(@Body() createDto: CreateNotificationRequestDto) {
+  async create(@Body() createDto: CreateNotificationForUserDto) {
     const notification = await this.notificationsService.create(
       createDto as any,
     );

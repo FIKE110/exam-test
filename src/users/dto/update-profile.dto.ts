@@ -1,7 +1,6 @@
 import {
   IsOptional,
   IsString,
-  IsUrl,
   IsEnum,
   IsDateString,
   Length,
@@ -22,14 +21,6 @@ export class UpdateProfileDto {
     message: 'Full name must be between 2 and 100 characters',
   })
   fullName?: string;
-
-  @ApiPropertyOptional({
-    description: 'URL to the user avatar image',
-    example: 'https://example.com/avatars/emma.jpg',
-  })
-  @IsOptional()
-  @IsUrl({}, { message: 'Avatar URL must be a valid URL' })
-  avatarUrl?: string;
 
   @ApiPropertyOptional({
     description: 'User phone number',
