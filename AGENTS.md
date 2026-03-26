@@ -4,6 +4,7 @@
 
 Backend API for an exam preparation platform with AI-powered study assistance, practice tests, mock exams, and progress tracking. Designed for candidates preparing for high-stakes professional exams abroad.
 
+
 ## Core Features (from Wireframes)
 
 ### User Management
