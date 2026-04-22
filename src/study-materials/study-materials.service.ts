@@ -8,12 +8,14 @@ import {
   QueryStudyMaterialDto,
   StudyMaterialResponseDto,
 } from './dto/study-material.dto';
+import { UploadService } from '../upload/services/upload.service';
 
 @Injectable()
 export class StudyMaterialsService {
   constructor(
     @InjectRepository(StudyMaterial)
     private studyMaterialRepository: Repository<StudyMaterial>,
+    private uploadService: UploadService,
   ) {}
 
   async findAll(options: QueryStudyMaterialDto) {
@@ -172,11 +174,35 @@ export class StudyMaterialsService {
       description: material.description,
       content: material.content,
       link: material.link,
+      coverImageUrl: material.coverImageUrl,
       thumbsUpCount: material.thumbsUpCount,
       averageRating: Number(material.averageRating),
       ratingCount: material.ratingCount,
       createdAt: material.createdAt,
       updatedAt: material.updatedAt,
     };
+  }
+
+  async updateCoverImage(
+    id: string,
+    coverImageUrl: string,
+  ): Promise<StudyMaterialResponseDto> {
+    const material = await this.studyMaterialRepository.findOne({
+      where: { id },
+    });
+
+    if (!material) {
+      throw new NotFoundException('Study material not found');
+    }
+
+    material.coverImageUrl = coverImageUrl;
+    await this.studyMaterialRepository.save(material);
+
+    const updated = await this.studyMaterialRepository.findOne({
+      where: { id },
+      relations: ['course'],
+    });
+
+    return this.toResponseDto(updated!);
   }
 }

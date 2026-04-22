@@ -48,6 +48,15 @@ export class CreateStudyMaterialDto {
   @IsUrl()
   @IsOptional()
   link?: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://res.cloudinary.com/example/image/upload/v1234567890/material-covers/abc123.jpg',
+    description: 'URL to the material cover image',
+  })
+  @IsUrl()
+  @IsOptional()
+  coverImageUrl?: string;
 }
 
 export class UpdateStudyMaterialDto {
@@ -71,6 +80,15 @@ export class UpdateStudyMaterialDto {
   @IsUrl()
   @IsOptional()
   link?: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://res.cloudinary.com/example/image/upload/v1234567890/material-covers/abc123.jpg',
+    description: 'URL to the material cover image',
+  })
+  @IsUrl()
+  @IsOptional()
+  coverImageUrl?: string;
 }
 
 export class QueryStudyMaterialDto {
@@ -126,6 +144,12 @@ export class StudyMaterialResponseDto {
 
   @ApiPropertyOptional({ example: 'https://example.com/calculus-guide' })
   link: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://res.cloudinary.com/example/image/upload/v1234567890/material-covers/abc123.jpg',
+  })
+  coverImageUrl: string;
 
   @ApiProperty({ example: 42 })
   thumbsUpCount: number;

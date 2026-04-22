@@ -7,12 +7,16 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Query,
   DefaultValuePipe,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +24,8 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiBody,
+  ApiParam,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { StudyMaterialsService } from './study-materials.service';
 import {
@@ -33,11 +39,15 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { UploadService, FileCategory } from '../upload/services/upload.service';
 
 @ApiTags('Study Materials')
 @Controller('study-materials')
 export class StudyMaterialsController {
-  constructor(private studyMaterialsService: StudyMaterialsService) {}
+  constructor(
+    private studyMaterialsService: StudyMaterialsService,
+    private uploadService: UploadService,
+  ) {}
 
   @Get()
   @Public()
@@ -412,5 +422,105 @@ export class StudyMaterialsController {
   @ApiResponse({ status: 404, description: 'Study material not found' })
   async addRating(@Param('id') id: string, @Body() rateDto: RateMaterialDto) {
     return this.studyMaterialsService.addRating(id, rateDto.rating);
+  }
+
+  @Post(':id/image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return callback(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload cover image for a study material (Admin only)',
+    description:
+      'Uploads a cover image for a study material. Accepts image files only (jpg, png, gif, webp). Max file size: 5MB. The image is stored on Cloudinary (or local filesystem as fallback) and the material cover image URL is updated.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Study material UUID',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    type: 'string',
+    format: 'uuid',
+  })
+  @ApiBody({
+    description: 'Image file to upload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (max 5MB)',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded and cover image URL updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            materialId: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440001',
+            },
+            coverImageUrl: {
+              type: 'string',
+              example:
+                'https://res.cloudinary.com/demo/image/upload/v1234567890/material-covers/abc123.jpg',
+            },
+          },
+        },
+        error: { type: 'null', example: null },
+        meta: {
+          type: 'object',
+          properties: {
+            timestamp: { type: 'string', example: '2026-03-21T10:30:00Z' },
+            request_id: { type: 'string', example: 'uuid' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error - Invalid file type or no file provided',
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 404, description: 'Study material not found' })
+  async uploadCoverImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No image file provided');
+    }
+
+    const { url } = await this.uploadService.uploadFile(
+      file,
+      FileCategory.MATERIAL_COVER,
+    );
+
+    return this.studyMaterialsService.updateCoverImage(id, url);
   }
 }

@@ -8,6 +8,7 @@ import * as path from 'path';
 export enum FileCategory {
   AVATAR = 'avatars',
   MATERIAL = 'materials',
+  MATERIAL_COVER = 'material-covers',
   DOCUMENT = 'documents',
   COURSE_IMAGE = 'course-images',
 }

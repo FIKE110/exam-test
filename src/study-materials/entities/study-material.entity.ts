@@ -35,6 +35,14 @@ export class StudyMaterial {
   @Column({ type: 'varchar', length: 500, nullable: true })
   link: string;
 
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    name: 'cover_image_url',
+  })
+  coverImageUrl: string;
+
   @Column({ type: 'integer', default: 0, name: 'thumbs_up_count' })
   thumbsUpCount: number;
 
