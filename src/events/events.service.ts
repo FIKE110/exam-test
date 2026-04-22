@@ -37,7 +37,7 @@ export class EventsService {
       total_pages: number;
     };
   }> {
-    const { page = 1, limit = 20, eventType, search, upcomingOnly } = options;
+    const { page = 1, limit = 20, eventType, search, upcomingOnly, sortBy, sortOrder } = options;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.eventRepository
@@ -59,8 +59,12 @@ export class EventsService {
       queryBuilder.andWhere('event.event_date > :now', { now: new Date() });
     }
 
+    const allowedSortFields = ['eventDate', 'title', 'created_at'];
+    const orderField = sortBy && allowedSortFields.includes(sortBy) ? `event.${sortBy}` : 'event.event_date';
+    const orderDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
     const [events, total] = await queryBuilder
-      .orderBy('event.event_date', 'ASC')
+      .orderBy(orderField, orderDirection)
       .skip(skip)
       .take(limit)
       .getManyAndCount();

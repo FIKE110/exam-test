@@ -71,6 +71,20 @@ export class EventsController {
     example: false,
     description: 'Show only upcoming events',
   })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    example: 'eventDate',
+    description: 'Sort field: eventDate, title, created_at',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    example: 'DESC',
+    description: 'Sort order: ASC or DESC',
+  })
   @ApiResponse({
     status: 200,
     description: 'Events retrieved successfully',
@@ -136,6 +150,8 @@ export class EventsController {
     @Query('eventType') eventType?: string,
     @Query('search') search?: string,
     @Query('upcomingOnly', new DefaultValuePipe(false)) upcomingOnly?: boolean,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
     @CurrentUser('userId') userId?: string,
   ) {
     return this.eventsService.findAll(
@@ -145,6 +161,8 @@ export class EventsController {
         eventType: eventType as any,
         search,
         upcomingOnly,
+        sortBy,
+        sortOrder,
       },
       userId,
     );

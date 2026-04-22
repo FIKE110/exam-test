@@ -78,6 +78,20 @@ export class StudyMaterialsController {
     type: String,
     description: 'Search term',
   })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    example: 'title',
+    description: 'Sort field: title, created_at, average_rating, thumbs_up_count',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    example: 'DESC',
+    description: 'Sort order: ASC or DESC',
+  })
   @ApiResponse({
     status: 200,
     description: 'Study materials retrieved successfully',
@@ -152,12 +166,16 @@ export class StudyMaterialsController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('courseId') courseId?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
     return this.studyMaterialsService.findAll({
       page,
       limit,
       courseId,
       search,
+      sortBy,
+      sortOrder,
     });
   }
 

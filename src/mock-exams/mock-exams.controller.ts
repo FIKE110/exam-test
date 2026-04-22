@@ -17,9 +17,10 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { MockExamsService } from './mock-exams.service';
-import { SubmitMockExamAnswerDto } from './dto/mock-exam.dto';
+import { SubmitMockExamAnswerDto, SubmitAllMockExamAnswersDto, MockExamSessionResumeDto } from './dto/mock-exam.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Mock Exams')
 @Controller('mock-exams')
@@ -29,6 +30,7 @@ export class MockExamsController {
   constructor(private readonly mockExamsService: MockExamsService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all available mock exams' })
   @ApiResponse({
     status: 200,
@@ -36,6 +38,64 @@ export class MockExamsController {
   })
   async getAvailableExams() {
     return this.mockExamsService.getAvailableExams();
+  }
+
+  @Get('session/:sessionId/resume')
+  @ApiOperation({ summary: 'Resume a mock exam session with all questions and answers' })
+  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session data retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            sessionId: { type: 'string' },
+            mockExamId: { type: 'string' },
+            title: { type: 'string' },
+            totalQuestions: { type: 'number' },
+            timeLimitSeconds: { type: 'number' },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  questionNumber: { type: 'number' },
+                  questionText: { type: 'string' },
+                  options: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        key: { type: 'string' },
+                        text: { type: 'string' },
+                      },
+                    },
+                  },
+                  isAnswered: { type: 'boolean' },
+                  selectedAnswer: { type: 'string', nullable: true },
+                },
+              },
+            },
+            answers: {
+              type: 'object',
+              additionalProperties: { type: 'string', nullable: true },
+            },
+            startedAt: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  async getSession(
+    @CurrentUser('userId') userId: string,
+    @Param('sessionId') sessionId: string,
+  ): Promise<any> {
+    return this.mockExamsService.resumeSession(sessionId, userId);
   }
 
   @Post(':id/start')
@@ -53,41 +113,6 @@ export class MockExamsController {
     return this.mockExamsService.startExam(userId, examId);
   }
 
-  @Get('session/:sessionId/status')
-  @ApiOperation({ summary: 'Get mock exam session status' })
-  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
-  @ApiResponse({ status: 200, description: 'Session status' })
-  @ApiResponse({ status: 404, description: 'Session not found' })
-  getSessionStatus(
-    @CurrentUser('userId') userId: string,
-    @Param('sessionId') sessionId: string,
-  ) {
-    return this.mockExamsService.getSessionStatus(sessionId, userId);
-  }
-
-  @Get('session/:sessionId/question')
-  @ApiOperation({ summary: 'Get a specific question from the mock exam' })
-  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
-  @ApiQuery({
-    name: 'number',
-    description: 'Question number (1-indexed)',
-    type: Number,
-  })
-  @ApiResponse({ status: 200, description: 'Question details' })
-  @ApiResponse({ status: 400, description: 'Invalid question number' })
-  @ApiResponse({ status: 404, description: 'Session not found' })
-  getQuestion(
-    @CurrentUser('userId') userId: string,
-    @Param('sessionId') sessionId: string,
-    @Query('number') questionNumber: number,
-  ) {
-    return this.mockExamsService.getQuestion(
-      sessionId,
-      userId,
-      Number(questionNumber),
-    );
-  }
-
   @Post('session/:sessionId/answer')
   @ApiOperation({ summary: 'Submit an answer for a mock exam question' })
   @ApiParam({ name: 'sessionId', description: 'Session UUID' })
@@ -97,13 +122,12 @@ export class MockExamsController {
       type: 'object',
       required: ['questionId', 'answer'],
       properties: {
-        questionId: { type: 'string', format: 'uuid', example: 'uuid' },
-        answer: { type: 'string', enum: ['A', 'B', 'C', 'D'], example: 'A' },
+        questionId: { type: 'string', format: 'uuid' },
+        answer: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
       },
     },
   })
   @ApiResponse({ status: 200, description: 'Answer submitted' })
-  @ApiResponse({ status: 400, description: 'Invalid answer' })
   @ApiResponse({ status: 404, description: 'Session or question not found' })
   submitAnswer(
     @CurrentUser('userId') userId: string,
@@ -118,18 +142,70 @@ export class MockExamsController {
     );
   }
 
-  @Post('session/:sessionId/complete')
-  @ApiOperation({ summary: 'Complete mock exam and get results' })
+  @Post('session/:sessionId/submit-all')
+  @ApiOperation({ summary: 'Submit all answers and receive full results' })
   @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiBody({
+    description: 'All answers to submit at once',
+    schema: {
+      type: 'object',
+      required: ['answers'],
+      properties: {
+        answers: {
+          type: 'object',
+          additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
+          example: { questionId1: 'A', questionId2: 'B' },
+          description: 'Mapping of question ID to answer',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
-    description: 'Mock exam completed with results',
+    description: 'All answers submitted with full results',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            sessionId: { type: 'string' },
+            mockExamId: { type: 'string' },
+            title: { type: 'string' },
+            totalQuestions: { type: 'number' },
+            timeLimitSeconds: { type: 'number' },
+            correctAnswers: { type: 'number' },
+            incorrectAnswers: { type: 'number' },
+            skippedQuestions: { type: 'number' },
+            scorePercentage: { type: 'number' },
+            timeSpentSeconds: { type: 'number' },
+            isPassed: { type: 'boolean' },
+            questionResults: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  questionNumber: { type: 'number' },
+                  questionText: { type: 'string' },
+                  correctAnswer: { type: 'string' },
+                  userAnswer: { type: 'string', nullable: true },
+                  isCorrect: { type: 'boolean' },
+                  explanation: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Session not found' })
-  async completeExam(
+  async submitAllAnswers(
     @CurrentUser('userId') userId: string,
     @Param('sessionId') sessionId: string,
+    @Body() dto: SubmitAllMockExamAnswersDto,
   ) {
-    return this.mockExamsService.completeExam(sessionId, userId);
+    return this.mockExamsService.submitAllAnswers(sessionId, userId, dto.answers);
   }
 }

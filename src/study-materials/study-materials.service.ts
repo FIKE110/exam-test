@@ -19,7 +19,7 @@ export class StudyMaterialsService {
   ) {}
 
   async findAll(options: QueryStudyMaterialDto) {
-    const { page = 1, limit = 20, courseId, search } = options;
+    const { page = 1, limit = 20, courseId, search, sortBy, sortOrder } = options;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.studyMaterialRepository
@@ -37,8 +37,12 @@ export class StudyMaterialsService {
       );
     }
 
+    const allowedSortFields = ['title', 'created_at', 'average_rating', 'thumbs_up_count'];
+    const orderField = sortBy && allowedSortFields.includes(sortBy) ? `material.${sortBy}` : 'material.created_at';
+    const orderDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
     const [materials, total] = await queryBuilder
-      .orderBy('material.created_at', 'DESC')
+      .orderBy(orderField, orderDirection)
       .skip(skip)
       .take(limit)
       .getManyAndCount();

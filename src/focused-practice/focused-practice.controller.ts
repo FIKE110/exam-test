@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { FocusedPracticeService } from './focused-practice.service';
 import { StartPracticeDto, QuestionCount } from './dto/start-practice.dto';
@@ -19,6 +20,8 @@ import {
   TestResultDto,
   SubmitAnswerDto,
   NavigateDto,
+  SubmitAllAnswersDto,
+  SessionResumeDto,
 } from './dto/test-session.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -573,5 +576,50 @@ export class FocusedPracticeController {
     @Param('sessionId') sessionId: string,
   ) {
     return this.focusedPracticeService.completeSession(sessionId, userId);
+  }
+
+  @Get('session/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resume a practice session with all questions and answers' })
+  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session data retrieved successfully',
+  })
+  async getSession(@Param('sessionId') sessionId: string, @CurrentUser('userId') userId: string) {
+    return this.focusedPracticeService.resumeSession(sessionId, userId);
+  }
+
+  @Post('session/:sessionId/submit-all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit all answers and receive full results' })
+  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiBody({
+    description: 'All answers to submit at once',
+    schema: {
+      type: 'object',
+      required: ['answers'],
+      properties: {
+        answers: {
+          type: 'object',
+          additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
+          example: { 0: 'A', 1: 'B', 2: 'C' },
+          description: 'Mapping of question index to answer',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All answers submitted with full results',
+  })
+  async submitAllAnswers(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser('userId') userId: string,
+    @Body() dto: SubmitAllAnswersDto,
+  ) {
+    return this.focusedPracticeService.submitAllAnswers(sessionId, userId, dto.answers);
   }
 }

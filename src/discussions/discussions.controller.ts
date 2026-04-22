@@ -77,6 +77,20 @@ export class DiscussionsController {
     type: String,
     description: 'Search term',
   })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    example: 'createdAt',
+    description: 'Sort field: createdAt, title, views, upvotes',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    example: 'DESC',
+    description: 'Sort order: ASC or DESC',
+  })
   @ApiResponse({
     status: 200,
     description: 'Posts retrieved successfully',
@@ -156,8 +170,10 @@ export class DiscussionsController {
     @Query('courseId') courseId?: string,
     @Query('tag') tag?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
-    return this.discussionsService.getPosts(page, limit, courseId, tag, search);
+    return this.discussionsService.getPosts(page, limit, courseId, tag, search, sortBy, sortOrder);
   }
 
   @Get(':id')

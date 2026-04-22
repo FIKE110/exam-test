@@ -91,6 +91,61 @@ export class SubmitAnswerDto {
   answer: string;
 }
 
+export class SubmitAllAnswersDto {
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
+    example: { 0: 'A', 1: 'B', 2: 'C', 3: 'A' },
+    description: 'Object mapping question index (0-based) to answer key',
+  })
+  @IsNotEmpty()
+  answers: Record<number, string>;
+}
+
+export class SessionResumeDto {
+  @ApiProperty({ example: 'sess_123' })
+  sessionId: string;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  courseId: string;
+
+  @ApiProperty({ example: 'Introduction to Mathematics' })
+  courseTitle: string;
+
+  @ApiProperty({ example: 'easy' })
+  difficulty: string;
+
+  @ApiProperty({ example: 10 })
+  questionCount: number;
+
+  @ApiProperty({ example: 1 })
+  currentQuestionNumber: number;
+
+  @ApiProperty({ example: 300 })
+  timeRemainingSeconds: number;
+
+  @ApiProperty({ example: 300 })
+  totalTimeSeconds: number;
+
+  @ApiProperty({ example: false })
+  isCompleted: boolean;
+
+  @ApiProperty({
+    type: TestQuestionDto,
+    isArray: true,
+    description: 'All questions with options',
+  })
+  questions: TestQuestionDto[];
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D', 'null'] },
+    example: { 0: 'A', 1: 'B', 2: null, 3: 'A' },
+    description: 'Object mapping question index to selected answer',
+  })
+  userAnswers: Record<number, string | null>;
+}
+
 export class NavigateDto {
   @ApiPropertyOptional({
     example: 5,

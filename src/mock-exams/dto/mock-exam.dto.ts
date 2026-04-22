@@ -97,6 +97,47 @@ export class SubmitMockExamAnswerDto {
   answer: string;
 }
 
+export class SubmitAllMockExamAnswersDto {
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
+    example: { 'uuid1': 'A', 'uuid2': 'B' },
+    description: 'Object mapping question ID to answer key',
+  })
+  @IsNotEmpty()
+  answers: Record<string, string>;
+}
+
+export class MockExamSessionResumeDto {
+  @ApiProperty({ example: 'uuid' })
+  sessionId: string;
+
+  @ApiProperty({ example: 'uuid' })
+  mockExamId: string;
+
+  @ApiProperty({ example: 'PLAB 1 Full Mock' })
+  title: string;
+
+  @ApiProperty({ example: 100 })
+  totalQuestions: number;
+
+  @ApiProperty({ example: 9000 })
+  timeLimitSeconds: number;
+
+  @ApiProperty({ type: [MockExamQuestionDto] })
+  questions: MockExamQuestionDto[];
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string', enum: ['A', 'B', 'C', 'D', 'null'] },
+    example: { 'uuid1': 'A', 'uuid2': null },
+  })
+  answers: Record<string, string | null>;
+
+  @ApiProperty({ example: '2026-03-21T10:00:00Z' })
+  startedAt: string;
+}
+
 export class MockExamQuestionResultDto {
   @ApiProperty({ example: 1 })
   questionNumber: number;

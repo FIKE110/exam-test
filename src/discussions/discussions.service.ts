@@ -35,6 +35,8 @@ export class DiscussionsService {
     courseId?: string,
     tag?: string,
     search?: string,
+    sortBy?: string,
+    sortOrder?: 'ASC' | 'DESC',
   ) {
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
@@ -72,8 +74,12 @@ export class DiscussionsService {
       );
     }
 
+    const allowedSortFields = ['createdAt', 'title', 'views', 'upvotes'];
+    const orderField = sortBy && allowedSortFields.includes(sortBy) ? `post.${sortBy}` : 'post.createdAt';
+    const orderDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
     const [posts, total] = await queryBuilder
-      .orderBy('post.createdAt', 'DESC')
+      .orderBy(orderField, orderDirection)
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

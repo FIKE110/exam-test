@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import {
   Difficulty,
   SessionStatus,
@@ -24,6 +24,7 @@ import {
   TestSessionStatusDto,
   TestResultDto,
   QuestionResultDto,
+  SessionResumeDto,
 } from './dto/test-session.dto';
 
 interface StoredQuestion {
@@ -220,6 +221,161 @@ export class FocusedPracticeService {
     };
   }
 
+  async resumeSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionResumeDto> {
+    const dbSession = await this.practiceSessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+
+    if (!dbSession) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (dbSession.status === SessionStatus.COMPLETED) {
+      throw new BadRequestException('Session is already completed');
+    }
+
+    const timeRemaining = this.calculateTimeRemainingFromDate(
+      dbSession.startedAt,
+      (dbSession.timeLimitMinutes || 10) * 60,
+    );
+    if (timeRemaining <= 0) {
+      throw new BadRequestException('Session has expired');
+    }
+
+    const existingSession = this.activeSessions.get(sessionId);
+    if (existingSession) {
+      const questions = existingSession.questions.map((q, i) => ({
+        id: q.id,
+        questionNumber: i + 1,
+        questionText: q.questionText,
+        options: q.options,
+        isAnswered: existingSession.answers.has(i),
+        selectedAnswer: existingSession.answers.get(i) || null,
+      }));
+
+      const userAnswers: Record<number, string | null> = {};
+      existingSession.answers.forEach((answer, index) => {
+        userAnswers[index] = answer;
+      });
+
+      return {
+        sessionId: existingSession.id,
+        courseId: existingSession.courseId,
+        courseTitle: existingSession.courseTitle,
+        difficulty: existingSession.difficulty,
+        questionCount: existingSession.questions.length,
+        currentQuestionNumber: existingSession.currentQuestionIndex + 1,
+        timeRemainingSeconds: this.calculateTimeRemainingFromDate(
+          existingSession.startedAt,
+          existingSession.totalTimeSeconds,
+        ),
+        totalTimeSeconds: existingSession.totalTimeSeconds,
+        isCompleted: existingSession.isCompleted,
+        questions,
+        userAnswers,
+      };
+    }
+
+    const course = await this.courseRepository.findOne({
+      where: { id: dbSession.courseId },
+    });
+
+    const difficulty = dbSession.difficulty || Difficulty.MEDIUM;
+
+    const allQuestions = await this.questionRepository.find({
+      where: { courseId: dbSession.courseId, difficulty },
+    });
+
+    const shuffled = shuffleArray(allQuestions);
+    const selected = shuffled.slice(0, dbSession.totalQuestions);
+
+    const storedQuestions: StoredQuestion[] =
+      selected.length > 0
+        ? selected.map((q) => ({
+            id: q.id,
+            questionText: q.questionText,
+            options: q.options.map((opt, idx) => ({
+              key: String.fromCharCode(65 + idx),
+              text: opt.text || opt.id,
+            })),
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+          }))
+        : this.generateMockQuestions(
+            dbSession.courseId,
+            difficulty,
+            dbSession.totalQuestions,
+          );
+
+    const sessionAnswers = await this.sessionAnswerRepository.find({
+      where: { sessionId },
+    });
+
+    const answersMap = new Map<number, string>();
+    sessionAnswers.forEach((sa) => {
+      const index = storedQuestions.findIndex((q) => q.id === sa.questionId);
+      if (index !== -1) {
+        answersMap.set(index, sa.selectedAnswer);
+      }
+    });
+
+    const restoredSession: StoredSession = {
+      id: dbSession.id,
+      userId,
+      courseId: dbSession.courseId,
+      courseTitle: course?.title || '',
+      difficulty: difficulty || Difficulty.MEDIUM,
+      questions: storedQuestions,
+      answers: answersMap,
+      currentQuestionIndex: answersMap.size,
+      startedAt: dbSession.startedAt,
+      totalTimeSeconds: (dbSession.timeLimitMinutes || 10) * 60,
+      isCompleted: false,
+      status: SessionStatus.IN_PROGRESS,
+    };
+
+    this.activeSessions.set(sessionId, restoredSession);
+
+    const questions = storedQuestions.map((q, i) => ({
+      id: q.id,
+      questionNumber: i + 1,
+      questionText: q.questionText,
+      options: q.options,
+      isAnswered: answersMap.has(i),
+      selectedAnswer: answersMap.get(i) || null,
+    }));
+
+    const userAnswers: Record<number, string | null> = {};
+    answersMap.forEach((answer, index) => {
+      userAnswers[index] = answer;
+    });
+
+    return {
+      sessionId: dbSession.id,
+      courseId: dbSession.courseId,
+      courseTitle: course?.title || '',
+      difficulty: difficulty || Difficulty.MEDIUM,
+      questionCount: storedQuestions.length,
+      currentQuestionNumber: answersMap.size + 1,
+      timeRemainingSeconds: this.calculateTimeRemainingFromDate(
+        dbSession.startedAt,
+        (dbSession.timeLimitMinutes || 10) * 60,
+      ),
+      totalTimeSeconds: (dbSession.timeLimitMinutes || 10) * 60,
+      isCompleted: false,
+      questions,
+      userAnswers,
+    };
+  }
+
+  private calculateTimeRemainingFromDate(startedAt: Date, totalSeconds: number): number {
+    const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    return Math.max(0, totalSeconds - elapsedSeconds);
+  }
+
   getCurrentQuestion(sessionId: string, userId: string): TestQuestionDto {
     const session = this.getActiveSession(sessionId, userId);
 
@@ -285,6 +441,175 @@ export class FocusedPracticeService {
     }
 
     return this.getCurrentQuestion(sessionId, userId);
+  }
+
+  async submitAllAnswers(
+    sessionId: string,
+    userId: string,
+    answers: Record<number, string>,
+  ): Promise<TestResultDto> {
+    const dbSession = await this.practiceSessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+
+    if (!dbSession) {
+      throw new BadRequestException('Session not found');
+    }
+
+    const difficulty = dbSession.difficulty || Difficulty.MEDIUM;
+
+    let session = this.activeSessions.get(sessionId);
+
+    if (!session) {
+      const course = await this.courseRepository.findOne({
+        where: { id: dbSession.courseId },
+      });
+
+      const allQuestions = await this.questionRepository.find({
+        where: { courseId: dbSession.courseId, difficulty },
+      });
+
+      const shuffled = shuffleArray(allQuestions);
+      const selected = shuffled.slice(0, dbSession.totalQuestions);
+
+      const storedQuestions: StoredQuestion[] =
+        selected.length > 0
+          ? selected.map((q) => ({
+              id: q.id,
+              questionText: q.questionText,
+              options: q.options.map((opt, idx) => ({
+                key: String.fromCharCode(65 + idx),
+                text: opt.text || opt.id,
+              })),
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+            }))
+          : this.generateMockQuestions(
+              dbSession.courseId,
+              difficulty,
+              dbSession.totalQuestions,
+            );
+
+      const answersMap = new Map<number, string>();
+      Object.entries(answers).forEach(([index, answer]) => {
+        const idx = parseInt(index, 10);
+        if (idx >= 0 && idx < storedQuestions.length && ['A', 'B', 'C', 'D'].includes(answer)) {
+          answersMap.set(idx, answer);
+        }
+      });
+
+      const newSession: StoredSession = {
+        id: dbSession.id,
+        userId,
+        courseId: dbSession.courseId,
+        courseTitle: course?.title || '',
+        difficulty: difficulty,
+        questions: storedQuestions,
+        answers: answersMap,
+        currentQuestionIndex: answersMap.size,
+        startedAt: dbSession.startedAt,
+        totalTimeSeconds: (dbSession.timeLimitMinutes || 10) * 60,
+        isCompleted: false,
+        status: SessionStatus.IN_PROGRESS,
+      };
+
+      this.activeSessions.set(sessionId, newSession);
+      session = newSession;
+    }
+
+    if (!session) {
+      throw new BadRequestException('Session not found');
+    }
+
+    if (session.isCompleted === false) {
+      Object.entries(answers).forEach(([index, answer]) => {
+        const idx = parseInt(index, 10);
+        if (idx >= 0 && idx < session.questions.length && ['A', 'B', 'C', 'D'].includes(answer)) {
+          session.answers.set(idx, answer);
+        }
+      });
+    }
+
+    const questionResults: QuestionResultDto[] = [];
+    let correctAnswers = 0;
+
+    for (let i = 0; i < session.questions.length; i++) {
+      const question = session.questions[i];
+      const userAnswer = session.answers.get(i) || null;
+      const isCorrect = userAnswer === question.correctAnswer;
+
+      if (userAnswer) {
+        const existing = await this.sessionAnswerRepository.findOne({
+          where: { sessionId, questionId: question.id },
+        });
+
+        if (existing) {
+          existing.selectedAnswer = userAnswer;
+          existing.isCorrect = isCorrect;
+          existing.answeredAt = new Date();
+          await this.sessionAnswerRepository.save(existing);
+        } else {
+          const dbAnswer = this.sessionAnswerRepository.create({
+            sessionId,
+            questionId: question.id,
+            selectedAnswer: userAnswer,
+            isCorrect,
+            timeSpentSeconds: 0,
+            isFlagged: false,
+            answeredAt: new Date(),
+          });
+          await this.sessionAnswerRepository.save(dbAnswer);
+        }
+      }
+
+      if (isCorrect) correctAnswers++;
+
+      questionResults.push({
+        questionNumber: i + 1,
+        questionText: question.questionText,
+        correctAnswer: question.correctAnswer,
+        userAnswer,
+        isCorrect,
+        explanation: question.explanation,
+      });
+    }
+
+    const totalQuestions = session.questions.length;
+    const answeredCount = session.answers.size;
+    const incorrectAnswers = answeredCount - correctAnswers;
+    const skippedQuestions = totalQuestions - answeredCount;
+    const timeSpentSeconds = Math.min(
+      Math.floor((Date.now() - session.startedAt.getTime()) / 1000),
+      session.totalTimeSeconds,
+    );
+    const accuracyPercentage =
+      answeredCount > 0
+        ? Math.round((correctAnswers / answeredCount) * 100)
+        : 0;
+
+    await this.practiceSessionRepository.update(sessionId, {
+      totalAnswered: answeredCount,
+      correctAnswers,
+      accuracyPercentage,
+      timeSpentSeconds,
+      status: SessionStatus.COMPLETED,
+      completedAt: new Date(),
+    });
+
+    this.activeSessions.delete(sessionId);
+
+    return {
+      sessionId: session.id,
+      courseTitle: session.courseTitle,
+      difficulty: session.difficulty,
+      totalQuestions,
+      correctAnswers,
+      incorrectAnswers,
+      skippedQuestions,
+      accuracyPercentage,
+      timeSpentSeconds,
+      questionResults,
+    };
   }
 
   nextQuestion(

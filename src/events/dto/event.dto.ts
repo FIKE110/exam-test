@@ -121,6 +121,16 @@ export class QueryEventDto {
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   upcomingOnly?: boolean;
+
+  @ApiPropertyOptional({ example: 'eventDate' })
+  @IsString()
+  @IsOptional()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ example: 'ASC' })
+  @IsString()
+  @IsOptional()
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export class EventResponseDto {

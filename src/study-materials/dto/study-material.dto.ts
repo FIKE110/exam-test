@@ -111,6 +111,16 @@ export class QueryStudyMaterialDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({ example: 'title' })
+  @IsString()
+  @IsOptional()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ example: 'ASC' })
+  @IsString()
+  @IsOptional()
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export class RateMaterialDto {

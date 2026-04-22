@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { MockExam } from './entities/mock-exam.entity';
 import { MockExamSession } from './entities/mock-exam-session.entity';
 import { Question } from '../questions/entities/question.entity';
@@ -15,6 +15,7 @@ import {
   MockExamQuestionDto,
   MockExamResultDto,
   MockExamQuestionResultDto,
+  MockExamSessionResumeDto,
 } from './dto/mock-exam.dto';
 
 const PASSING_THRESHOLD = 60;
@@ -200,6 +201,97 @@ export class MockExamsService {
     };
   }
 
+  async resumeSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<MockExamSessionResumeDto> {
+    const dbSession = await this.mockExamSessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+
+    if (!dbSession) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (dbSession.isCompleted) {
+      throw new BadRequestException('Session is already completed');
+    }
+
+    const elapsed = Math.floor(
+      (Date.now() - dbSession.startedAt.getTime()) / 1000,
+    );
+    if (elapsed >= dbSession.timeLimitSeconds) {
+      throw new BadRequestException('Exam time has expired');
+    }
+
+    let session = this.activeSessions.get(sessionId);
+
+    if (!session) {
+      const questions = await this.questionRepository.find({
+        where: { id: In(dbSession.questionIds) },
+      });
+
+      const questionMap = new Map(questions.map((q) => [q.id, q]));
+      const orderedQuestions = dbSession.questionIds
+        .map((id) => questionMap.get(id))
+        .filter((q): q is Question => !!q);
+
+      const storedQuestions = orderedQuestions.map((q) => ({
+        id: q.id,
+        questionText: q.questionText,
+        options: q.options.map((opt, idx) => ({
+          key: String.fromCharCode(65 + idx),
+          text: opt.text || opt.id,
+        })),
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+      }));
+
+      const questionIndexMap: Record<string, number> = {};
+      storedQuestions.forEach((q, idx) => {
+        questionIndexMap[q.id] = idx;
+      });
+
+      session = {
+        sessionId: dbSession.id,
+        mockExamId: dbSession.mockExamId,
+        userId,
+        questions: storedQuestions,
+        answers: dbSession.answers,
+        questionIndexMap,
+        startedAt: dbSession.startedAt,
+        timeLimitSeconds: dbSession.timeLimitSeconds,
+      };
+      this.activeSessions.set(sessionId, session);
+    }
+
+    const questionsForClient: MockExamQuestionDto[] = session.questions.map(
+      (q, i) => ({
+        id: q.id,
+        questionNumber: i + 1,
+        questionText: q.questionText,
+        options: q.options,
+        isAnswered: q.id in session.answers,
+        selectedAnswer: session.answers[q.id] || null,
+      }),
+    );
+
+    const exam = await this.mockExamRepository.findOne({
+      where: { id: dbSession.mockExamId },
+    });
+
+    return {
+      sessionId: dbSession.id,
+      mockExamId: dbSession.mockExamId,
+      title: exam?.title || '',
+      totalQuestions: session.questions.length,
+      timeLimitSeconds: session.timeLimitSeconds,
+      questions: questionsForClient,
+      answers: session.answers,
+      startedAt: dbSession.startedAt.toISOString(),
+    };
+  }
+
   getQuestion(
     sessionId: string,
     userId: string,
@@ -252,6 +344,35 @@ export class MockExamsService {
       answeredCount: Object.keys(session.answers).length,
       totalQuestions: session.questions.length,
     };
+  }
+
+  async submitAllAnswers(
+    sessionId: string,
+    userId: string,
+    answers: Record<string, string>,
+  ): Promise<MockExamResultDto> {
+    let session = this.activeSessions.get(sessionId);
+
+    if (!session) {
+      await this.resumeSession(sessionId, userId);
+      session = this.activeSessions.get(sessionId);
+    }
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // Update answers
+    Object.entries(answers).forEach(([questionId, answer]) => {
+      if (
+        questionId in session.questionIndexMap &&
+        ['A', 'B', 'C', 'D'].includes(answer)
+      ) {
+        session.answers[questionId] = answer;
+      }
+    });
+
+    return this.completeExam(sessionId, userId);
   }
 
   async completeExam(
