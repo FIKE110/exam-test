@@ -310,4 +310,22 @@ export class CoursesService {
 
     return { success: true };
   }
+
+  async updateThumbnail(id: string, thumbnailUrl: string) {
+    const course = await this.courseRepository.findOne({
+      where: { id },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    course.thumbnailUrl = thumbnailUrl;
+    await this.courseRepository.save(course);
+
+    return {
+      courseId: course.id,
+      thumbnailUrl: course.thumbnailUrl,
+    };
+  }
 }

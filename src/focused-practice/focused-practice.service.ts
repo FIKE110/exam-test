@@ -5,13 +5,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Difficulty, SessionStatus } from '../common/enums/practice.enum';
+import {
+  Difficulty,
+  SessionStatus,
+  SessionType,
+} from '../common/enums/practice.enum';
 import { PracticeSession } from '../practice/entities/practice-session.entity';
+import { SessionAnswer } from '../practice/entities/session-answer.entity';
 import { Question } from '../questions/entities/question.entity';
 import { Course } from '../courses/entities/course.entity';
 import { StartPracticeDto, QuestionCount } from './dto/start-practice.dto';
 import {
-  PracticeSessionResponseDto,
   CoursesListDto,
   DifficultyOptionDto,
 } from './dto/practice-response.dto';
@@ -21,6 +25,14 @@ import {
   TestResultDto,
   QuestionResultDto,
 } from './dto/test-session.dto';
+
+interface StoredQuestion {
+  id: string;
+  questionText: string;
+  options: { key: string; text: string }[];
+  correctAnswer: string;
+  explanation: string;
+}
 
 interface StoredSession {
   id: string;
@@ -37,49 +49,17 @@ interface StoredSession {
   status: SessionStatus;
 }
 
-interface StoredQuestion {
-  id: string;
-  questionText: string;
-  options: { key: string; text: string }[];
-  correctAnswer: string;
-  explanation: string;
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 @Injectable()
 export class FocusedPracticeService {
-  private readonly mockCourses: CoursesListDto[] = [
-    {
-      id: '550e8400-e29b-41d4-a716-446655440001',
-      title: 'Introduction to Mathematics',
-      slug: 'introduction-to-mathematics',
-      description: 'Basic math concepts and calculations',
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440002',
-      title: 'Advanced Physics',
-      slug: 'advanced-physics',
-      description: 'Mechanics, thermodynamics, and electromagnetism',
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440003',
-      title: 'Organic Chemistry',
-      slug: 'organic-chemistry',
-      description: 'Carbon compounds and reactions',
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440004',
-      title: 'Biology Fundamentals',
-      slug: 'biology-fundamentals',
-      description: 'Cell biology and genetics basics',
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440005',
-      title: 'English Grammar',
-      slug: 'english-grammar',
-      description: 'Grammar rules and sentence structure',
-    },
-  ];
-
   private readonly difficulties: DifficultyOptionDto[] = [
     { value: Difficulty.EASY, label: 'Easy' },
     { value: Difficulty.MEDIUM, label: 'Medium' },
@@ -91,14 +71,25 @@ export class FocusedPracticeService {
   constructor(
     @InjectRepository(PracticeSession)
     private readonly practiceSessionRepository: Repository<PracticeSession>,
+    @InjectRepository(SessionAnswer)
+    private readonly sessionAnswerRepository: Repository<SessionAnswer>,
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
   ) {}
 
-  getCourses(): CoursesListDto[] {
-    return this.mockCourses;
+  async getCourses(): Promise<CoursesListDto[]> {
+    const courses = await this.courseRepository.find({
+      where: { isActive: true },
+      select: ['id', 'title', 'slug', 'description'],
+    });
+    return courses.map((c) => ({
+      id: c.id,
+      title: c.title,
+      slug: c.slug,
+      description: c.description,
+    }));
   }
 
   getDifficultyOptions(): DifficultyOptionDto[] {
@@ -112,21 +103,35 @@ export class FocusedPracticeService {
   async startPractice(
     userId: string,
     dto: StartPracticeDto,
-  ): Promise<PracticeSessionResponseDto> {
-    const course = this.mockCourses.find((c) => c.id === dto.courseId);
+  ): Promise<{
+    sessionId: string;
+    courseTitle: string;
+    difficulty: Difficulty;
+    questionCount: number;
+    questions: TestQuestionDto[];
+    startedAt: string;
+  }> {
+    const course = await this.courseRepository.findOne({
+      where: { id: dto.courseId, isActive: true },
+    });
 
-    const questions = await this.questionRepository.find({
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    const allQuestions = await this.questionRepository.find({
       where: {
         courseId: dto.courseId,
         difficulty: dto.difficulty,
       },
-      take: dto.questionCount,
-      order: { createdAt: 'DESC' },
     });
 
+    const shuffled = shuffleArray(allQuestions);
+    const selected = shuffled.slice(0, dto.questionCount);
+
     const storedQuestions: StoredQuestion[] =
-      questions.length > 0
-        ? questions.map((q) => ({
+      selected.length > 0
+        ? selected.map((q) => ({
             id: q.id,
             questionText: q.questionText,
             options: q.options.map((opt, idx) => ({
@@ -142,40 +147,56 @@ export class FocusedPracticeService {
             dto.questionCount,
           );
 
-    const sessionId = `sess_${Date.now()}_${userId.slice(0, 8)}`;
     const totalTimeSeconds = dto.questionCount * 30;
 
+    const dbSession = this.practiceSessionRepository.create({
+      userId,
+      sessionType: SessionType.FOCUSED,
+      courseId: dto.courseId,
+      difficulty: dto.difficulty,
+      totalQuestions: storedQuestions.length,
+      totalAnswered: 0,
+      correctAnswers: 0,
+      timeLimitMinutes: Math.ceil(totalTimeSeconds / 60),
+      timeSpentSeconds: 0,
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date(),
+    });
+    const savedSession = await this.practiceSessionRepository.save(dbSession);
+
     const session: StoredSession = {
-      id: sessionId,
+      id: savedSession.id,
       userId,
       courseId: dto.courseId,
-      courseTitle: course?.title || 'Unknown Course',
+      courseTitle: course.title,
       difficulty: dto.difficulty,
       questions: storedQuestions,
       answers: new Map(),
       currentQuestionIndex: 0,
-      startedAt: new Date(),
+      startedAt: savedSession.startedAt,
       totalTimeSeconds,
       isCompleted: false,
       status: SessionStatus.IN_PROGRESS,
     };
 
-    this.activeSessions.set(sessionId, session);
+    this.activeSessions.set(savedSession.id, session);
 
-    const responseQuestions = storedQuestions.map((q, i) => ({
+    const questions = storedQuestions.map((q, i) => ({
       id: q.id,
+      questionNumber: i + 1,
       questionText: q.questionText,
       options: q.options,
+      isAnswered: false,
+      selectedAnswer: null,
     }));
 
     return {
-      sessionId,
-      courseTitle: course?.title || 'Unknown Course',
+      sessionId: savedSession.id,
+      courseTitle: course.title,
       difficulty: dto.difficulty,
       questionCount: dto.questionCount,
-      questions: responseQuestions,
-      startedAt: session.startedAt.toISOString(),
-      timeLimitMinutes: null,
+      questions,
+      startedAt: savedSession.startedAt.toISOString(),
     };
   }
 
@@ -221,11 +242,11 @@ export class FocusedPracticeService {
     };
   }
 
-  submitAnswer(
+  async submitAnswer(
     sessionId: string,
     userId: string,
     answer: string,
-  ): TestQuestionDto {
+  ): Promise<TestQuestionDto> {
     const session = this.getActiveSession(sessionId, userId);
 
     if (session.isCompleted) {
@@ -237,6 +258,31 @@ export class FocusedPracticeService {
     }
 
     session.answers.set(session.currentQuestionIndex, answer);
+
+    const question = session.questions[session.currentQuestionIndex];
+    const isCorrect = answer === question.correctAnswer;
+
+    const existing = await this.sessionAnswerRepository.findOne({
+      where: { sessionId, questionId: question.id },
+    });
+
+    if (existing) {
+      existing.selectedAnswer = answer;
+      existing.isCorrect = isCorrect;
+      existing.answeredAt = new Date();
+      await this.sessionAnswerRepository.save(existing);
+    } else {
+      const dbAnswer = this.sessionAnswerRepository.create({
+        sessionId,
+        questionId: question.id,
+        selectedAnswer: answer,
+        isCorrect,
+        timeSpentSeconds: 0,
+        isFlagged: false,
+        answeredAt: new Date(),
+      });
+      await this.sessionAnswerRepository.save(dbAnswer);
+    }
 
     return this.getCurrentQuestion(sessionId, userId);
   }
@@ -285,7 +331,10 @@ export class FocusedPracticeService {
     return this.getCurrentQuestion(sessionId, userId);
   }
 
-  completeSession(sessionId: string, userId: string): TestResultDto {
+  async completeSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<TestResultDto> {
     const session = this.getActiveSession(sessionId, userId);
 
     session.isCompleted = true;
@@ -323,6 +372,17 @@ export class FocusedPracticeService {
       answeredCount > 0
         ? Math.round((correctAnswers / answeredCount) * 100)
         : 0;
+
+    await this.practiceSessionRepository.update(session.id, {
+      totalAnswered: answeredCount,
+      correctAnswers,
+      accuracyPercentage,
+      timeSpentSeconds,
+      status: SessionStatus.COMPLETED,
+      completedAt: new Date(),
+    });
+
+    this.activeSessions.delete(sessionId);
 
     return {
       sessionId: session.id,
@@ -380,58 +440,6 @@ export class FocusedPracticeService {
       string,
       { question: string; options: string[]; answer: string }[]
     > = {
-      '550e8400-e29b-41d4-a716-446655440001': [
-        {
-          question: 'What is 2 + 2?',
-          options: ['3', '4', '5', '6'],
-          answer: 'B',
-        },
-        {
-          question: 'What is 10 / 2?',
-          options: ['3', '4', '5', '6'],
-          answer: 'C',
-        },
-        {
-          question: 'What is 7 x 8?',
-          options: ['54', '56', '58', '60'],
-          answer: 'B',
-        },
-        {
-          question: 'What is the square root of 144?',
-          options: ['10', '11', '12', '13'],
-          answer: 'C',
-        },
-        {
-          question: 'What is 25% of 80?',
-          options: ['15', '20', '25', '30'],
-          answer: 'B',
-        },
-        {
-          question: 'What is 15 + 27?',
-          options: ['40', '41', '42', '43'],
-          answer: 'C',
-        },
-        {
-          question: 'What is 100 - 37?',
-          options: ['61', '62', '63', '64'],
-          answer: 'C',
-        },
-        {
-          question: 'What is 6²?',
-          options: ['30', '36', '42', '48'],
-          answer: 'B',
-        },
-        {
-          question: 'What is 1/4 as a decimal?',
-          options: ['0.14', '0.25', '0.4', '0.5'],
-          answer: 'B',
-        },
-        {
-          question: 'What is the next prime after 7?',
-          options: ['8', '9', '10', '11'],
-          answer: 'D',
-        },
-      ],
       default: [
         {
           question: 'What is the capital of France?',

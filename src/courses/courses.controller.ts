@@ -6,12 +6,16 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Query,
   DefaultValuePipe,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +24,7 @@ import {
   ApiQuery,
   ApiBody,
   ApiParam,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import {
@@ -33,6 +38,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { UploadService, FileCategory } from '../upload/services/upload.service';
 
 class CourseResponseDto {
   id: string;
@@ -81,7 +87,10 @@ class UpdateProgressResponseDto {
 @ApiTags('Courses')
 @Controller('courses')
 export class CoursesController {
-  constructor(private coursesService: CoursesService) {}
+  constructor(
+    private coursesService: CoursesService,
+    private uploadService: UploadService,
+  ) {}
 
   @Get()
   @Public()
@@ -518,6 +527,104 @@ export class CoursesController {
   })
   async create(@Body() createCourseDto: CreateCourseDto) {
     return this.coursesService.create(createCourseDto);
+  }
+
+  @Post(':id/image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return callback(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload course thumbnail image (Admin only)',
+    description:
+      'Uploads a thumbnail image for a course. Accepts image files only (jpg, png, gif, webp). Max file size: 5MB. The image is stored on Cloudinary (or local filesystem as fallback) and the course thumbnail URL is updated.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Course UUID',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    type: 'string',
+    format: 'uuid',
+  })
+  @ApiBody({
+    description: 'Image file to upload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (max 5MB)',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded and course thumbnail updated successfully',
+    content: {
+      'application/json': {
+        example: {
+          status: true,
+          data: {
+            courseId: '550e8400-e29b-41d4-a716-446655440001',
+            thumbnailUrl:
+              'https://res.cloudinary.com/demo/image/upload/v1234567890/course-images/abc123.jpg',
+          },
+          error: null,
+          meta: {
+            timestamp: '2026-03-21T10:30:00.000Z',
+            request_id: 'uuid',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error - Invalid file type or no file provided',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found',
+  })
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No image file provided');
+    }
+
+    const { url } = await this.uploadService.uploadFile(
+      file,
+      FileCategory.COURSE_IMAGE,
+    );
+
+    return this.coursesService.updateThumbnail(id, url);
   }
 
   @Put(':id')

@@ -1,8 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { UserStreak } from './entities/user-streak.entity';
 import { PracticeSession } from '../practice/entities/practice-session.entity';
+import { SessionAnswer } from '../practice/entities/session-answer.entity';
+import { Course } from '../courses/entities/course.entity';
+import { SessionStatus } from '../common/enums/practice.enum';
 
 interface WeeklyTrend {
   week: string;
@@ -27,274 +30,215 @@ interface DailyActivity {
   sessionsCompleted: number;
 }
 
-interface OverallPerformance {
-  totalQuestionsAnswered: number;
-  totalCorrectAnswers: number;
-  overallAccuracy: number;
-  totalHoursStudied: number;
-  totalSessionsCompleted: number;
-  currentStreak: number;
-  longestStreak: number;
-  subjectPerformance: SubjectPerformance[];
-  recentSessions: {
-    id: string;
-    courseTitle: string;
-    score: number;
-    completedAt: Date;
-  }[];
-}
-
-interface StudyTrends {
-  weeklyTrends: WeeklyTrend[];
-  dailyActivity: DailyActivity[];
-  weeklyHours: { week: string; hours: number }[];
-}
-
 @Injectable()
 export class ProgressService {
-  private mockWeeklyTrends: WeeklyTrend[] = [
-    {
-      week: '2026-W11',
-      questionsAnswered: 145,
-      correctAnswers: 112,
-      accuracy: 77.2,
-      hoursSpent: 8.5,
-    },
-    {
-      week: '2026-W12',
-      questionsAnswered: 168,
-      correctAnswers: 134,
-      accuracy: 79.8,
-      hoursSpent: 10.2,
-    },
-    {
-      week: '2026-W13',
-      questionsAnswered: 132,
-      correctAnswers: 108,
-      accuracy: 81.8,
-      hoursSpent: 7.5,
-    },
-    {
-      week: '2026-W14',
-      questionsAnswered: 195,
-      correctAnswers: 162,
-      accuracy: 83.1,
-      hoursSpent: 12.0,
-    },
-    {
-      week: '2026-W15',
-      questionsAnswered: 178,
-      correctAnswers: 152,
-      accuracy: 85.4,
-      hoursSpent: 9.8,
-    },
-    {
-      week: '2026-W16',
-      questionsAnswered: 210,
-      correctAnswers: 183,
-      accuracy: 87.1,
-      hoursSpent: 11.5,
-    },
-    {
-      week: '2026-W17',
-      questionsAnswered: 225,
-      correctAnswers: 198,
-      accuracy: 88.0,
-      hoursSpent: 13.2,
-    },
-  ];
-
-  private mockDailyActivity: DailyActivity[] = [
-    {
-      date: '2026-03-15',
-      questionsAnswered: 25,
-      hoursSpent: 1.5,
-      sessionsCompleted: 2,
-    },
-    {
-      date: '2026-03-16',
-      questionsAnswered: 18,
-      hoursSpent: 1.0,
-      sessionsCompleted: 1,
-    },
-    {
-      date: '2026-03-17',
-      questionsAnswered: 42,
-      hoursSpent: 2.5,
-      sessionsCompleted: 3,
-    },
-    {
-      date: '2026-03-18',
-      questionsAnswered: 30,
-      hoursSpent: 1.8,
-      sessionsCompleted: 2,
-    },
-    {
-      date: '2026-03-19',
-      questionsAnswered: 35,
-      hoursSpent: 2.0,
-      sessionsCompleted: 2,
-    },
-    {
-      date: '2026-03-20',
-      questionsAnswered: 45,
-      hoursSpent: 2.8,
-      sessionsCompleted: 3,
-    },
-    {
-      date: '2026-03-21',
-      questionsAnswered: 30,
-      hoursSpent: 1.6,
-      sessionsCompleted: 2,
-    },
-  ];
-
-  private mockSubjectPerformance: SubjectPerformance[] = [
-    {
-      courseId: '1',
-      courseName: 'Pharmacology',
-      questionsAnswered: 450,
-      correctAnswers: 378,
-      accuracy: 84.0,
-    },
-    {
-      courseId: '2',
-      courseName: 'Anatomy',
-      questionsAnswered: 380,
-      correctAnswers: 304,
-      accuracy: 80.0,
-    },
-    {
-      courseId: '3',
-      courseName: 'Physiology',
-      questionsAnswered: 320,
-      correctAnswers: 256,
-      accuracy: 80.0,
-    },
-    {
-      courseId: '4',
-      courseName: 'Biochemistry',
-      questionsAnswered: 280,
-      correctAnswers: 210,
-      accuracy: 75.0,
-    },
-    {
-      courseId: '5',
-      courseName: 'Microbiology',
-      questionsAnswered: 240,
-      correctAnswers: 180,
-      accuracy: 75.0,
-    },
-  ];
-
   constructor(
     @InjectRepository(UserStreak)
     private userStreakRepository: Repository<UserStreak>,
     @InjectRepository(PracticeSession)
     private practiceSessionRepository: Repository<PracticeSession>,
+    @InjectRepository(SessionAnswer)
+    private sessionAnswerRepository: Repository<SessionAnswer>,
+    @InjectRepository(Course)
+    private courseRepository: Repository<Course>,
   ) {}
 
-  async getStudyTrends(userId: string): Promise<StudyTrends> {
-    await this.ensureUserStreak(userId);
+  async getStudyTrends(userId: string) {
+    const sessions = await this.practiceSessionRepository.find({
+      where: { userId, status: SessionStatus.COMPLETED },
+      order: { completedAt: 'DESC' },
+    });
 
-    const weeklyHours = this.mockWeeklyTrends.map((w) => ({
+    const weeklyMap = new Map<
+      string,
+      {
+        questionsAnswered: number;
+        correctAnswers: number;
+        timeSpentSeconds: number;
+      }
+    >();
+    const dailyMap = new Map<
+      string,
+      {
+        questionsAnswered: number;
+        timeSpentSeconds: number;
+        sessionsCompleted: number;
+      }
+    >();
+
+    for (const session of sessions) {
+      if (!session.completedAt) continue;
+
+      const date = new Date(session.completedAt);
+      const dateStr = date.toISOString().split('T')[0];
+      const weekStr = this.getWeekString(date);
+
+      if (!weeklyMap.has(weekStr)) {
+        weeklyMap.set(weekStr, {
+          questionsAnswered: 0,
+          correctAnswers: 0,
+          timeSpentSeconds: 0,
+        });
+      }
+      const week = weeklyMap.get(weekStr)!;
+      week.questionsAnswered += session.totalAnswered;
+      week.correctAnswers += session.correctAnswers;
+      week.timeSpentSeconds += session.timeSpentSeconds;
+
+      if (!dailyMap.has(dateStr)) {
+        dailyMap.set(dateStr, {
+          questionsAnswered: 0,
+          timeSpentSeconds: 0,
+          sessionsCompleted: 0,
+        });
+      }
+      const day = dailyMap.get(dateStr)!;
+      day.questionsAnswered += session.totalAnswered;
+      day.timeSpentSeconds += session.timeSpentSeconds;
+      day.sessionsCompleted += 1;
+    }
+
+    const weeklyTrends: WeeklyTrend[] = Array.from(weeklyMap.entries())
+      .map(([week, data]) => ({
+        week,
+        questionsAnswered: data.questionsAnswered,
+        correctAnswers: data.correctAnswers,
+        accuracy:
+          data.questionsAnswered > 0
+            ? Math.round(
+                (data.correctAnswers / data.questionsAnswered) * 100 * 10,
+              ) / 10
+            : 0,
+        hoursSpent: Math.round((data.timeSpentSeconds / 3600) * 10) / 10,
+      }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+
+    const dailyActivity: DailyActivity[] = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({
+        date,
+        questionsAnswered: data.questionsAnswered,
+        hoursSpent: Math.round((data.timeSpentSeconds / 3600) * 10) / 10,
+        sessionsCompleted: data.sessionsCompleted,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const weeklyHours = weeklyTrends.map((w) => ({
       week: w.week,
       hours: w.hoursSpent,
     }));
 
-    return {
-      weeklyTrends: this.mockWeeklyTrends,
-      dailyActivity: this.mockDailyActivity,
-      weeklyHours,
-    };
+    return { weeklyTrends, dailyActivity, weeklyHours };
   }
 
-  async getWeeklyStudyHours(
-    userId: string,
-  ): Promise<{ weeks: { week: string; hours: number }[]; totalHours: number }> {
-    await this.ensureUserStreak(userId);
+  async getWeeklyStudyHours(userId: string) {
+    const sessions = await this.practiceSessionRepository.find({
+      where: { userId, status: SessionStatus.COMPLETED },
+    });
 
-    const weeklyHours = this.mockWeeklyTrends.map((w) => ({
-      week: w.week,
-      hours: w.hoursSpent,
-    }));
+    const weeklyMap = new Map<string, number>();
 
-    const totalHours = weeklyHours.reduce((sum, w) => sum + w.hours, 0);
+    for (const session of sessions) {
+      if (!session.completedAt) continue;
+      const weekStr = this.getWeekString(new Date(session.completedAt));
+      const current = weeklyMap.get(weekStr) || 0;
+      weeklyMap.set(weekStr, current + session.timeSpentSeconds);
+    }
 
-    return {
-      weeks: weeklyHours,
-      totalHours: Math.round(totalHours * 10) / 10,
-    };
+    const weeks = Array.from(weeklyMap.entries())
+      .map(([week, seconds]) => ({
+        week,
+        hours: Math.round((seconds / 3600) * 10) / 10,
+      }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+
+    const totalHours =
+      Math.round(weeks.reduce((sum, w) => sum + w.hours, 0) * 10) / 10;
+
+    return { weeks, totalHours };
   }
 
-  async getOverallPerformance(userId: string): Promise<OverallPerformance> {
-    await this.ensureUserStreak(userId);
+  async getOverallPerformance(userId: string) {
+    const sessions = await this.practiceSessionRepository.find({
+      where: { userId, status: SessionStatus.COMPLETED },
+      order: { completedAt: 'DESC' },
+      relations: ['course'],
+    });
 
     const streak = await this.userStreakRepository.findOne({
       where: { userId },
     });
 
-    const totalQuestionsAnswered = this.mockSubjectPerformance.reduce(
-      (sum, s) => sum + s.questionsAnswered,
-      0,
-    );
-    const totalCorrectAnswers = this.mockSubjectPerformance.reduce(
-      (sum, s) => sum + s.correctAnswers,
-      0,
-    );
-    const totalHours = this.mockWeeklyTrends.reduce(
-      (sum, w) => sum + w.hoursSpent,
-      0,
-    );
+    const courseMap = new Map<
+      string,
+      { courseName: string; questionsAnswered: number; correctAnswers: number }
+    >();
+
+    let totalQuestionsAnswered = 0;
+    let totalCorrectAnswers = 0;
+    let totalTimeSeconds = 0;
+
+    for (const session of sessions) {
+      totalQuestionsAnswered += session.totalAnswered;
+      totalCorrectAnswers += session.correctAnswers;
+      totalTimeSeconds += session.timeSpentSeconds;
+
+      const courseId = session.courseId;
+      const courseName = session.course?.title || 'Unknown Course';
+
+      if (!courseMap.has(courseId)) {
+        courseMap.set(courseId, {
+          courseName,
+          questionsAnswered: 0,
+          correctAnswers: 0,
+        });
+      }
+      const entry = courseMap.get(courseId)!;
+      entry.questionsAnswered += session.totalAnswered;
+      entry.correctAnswers += session.correctAnswers;
+    }
+
+    const subjectPerformance: SubjectPerformance[] = Array.from(
+      courseMap.entries(),
+    ).map(([courseId, data]) => ({
+      courseId,
+      courseName: data.courseName,
+      questionsAnswered: data.questionsAnswered,
+      correctAnswers: data.correctAnswers,
+      accuracy:
+        data.questionsAnswered > 0
+          ? Math.round(
+              (data.correctAnswers / data.questionsAnswered) * 100 * 10,
+            ) / 10
+          : 0,
+    }));
+
+    const recentSessions = sessions.slice(0, 5).map((s) => ({
+      id: s.id,
+      courseTitle: s.course?.title || 'Unknown Course',
+      score: s.accuracyPercentage || 0,
+      completedAt: s.completedAt,
+    }));
 
     return {
       totalQuestionsAnswered,
       totalCorrectAnswers,
       overallAccuracy:
-        Math.round((totalCorrectAnswers / totalQuestionsAnswered) * 100 * 10) /
-        10,
-      totalHoursStudied: Math.round(totalHours * 10) / 10,
-      totalSessionsCompleted: 45,
-      currentStreak: streak?.currentStreak || 7,
-      longestStreak: streak?.longestStreak || 14,
-      subjectPerformance: this.mockSubjectPerformance,
-      recentSessions: [
-        {
-          id: '1',
-          courseTitle: 'Pharmacology',
-          score: 85,
-          completedAt: new Date('2026-03-21'),
-        },
-        {
-          id: '2',
-          courseTitle: 'Anatomy',
-          score: 78,
-          completedAt: new Date('2026-03-20'),
-        },
-        {
-          id: '3',
-          courseTitle: 'Physiology',
-          score: 92,
-          completedAt: new Date('2026-03-19'),
-        },
-        {
-          id: '4',
-          courseTitle: 'Biochemistry',
-          score: 70,
-          completedAt: new Date('2026-03-18'),
-        },
-        {
-          id: '5',
-          courseTitle: 'Microbiology',
-          score: 88,
-          completedAt: new Date('2026-03-17'),
-        },
-      ],
+        totalQuestionsAnswered > 0
+          ? Math.round(
+              (totalCorrectAnswers / totalQuestionsAnswered) * 100 * 10,
+            ) / 10
+          : 0,
+      totalHoursStudied: Math.round((totalTimeSeconds / 3600) * 10) / 10,
+      totalSessionsCompleted: sessions.length,
+      currentStreak: streak?.currentStreak || 0,
+      longestStreak: streak?.longestStreak || 0,
+      subjectPerformance,
+      recentSessions,
     };
   }
 
   async getStreakInfo(userId: string) {
-    const streak = await this.ensureUserStreak(userId);
+    const streak = await this.updateStreak(userId);
 
     return {
       currentStreak: streak.currentStreak,
@@ -304,30 +248,94 @@ export class ProgressService {
     };
   }
 
-  private async ensureUserStreak(userId: string): Promise<UserStreak> {
+  async updateStreak(userId: string): Promise<UserStreak> {
     let streak = await this.userStreakRepository.findOne({
       where: { userId },
     });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const hasPracticedToday = await this.practiceSessionRepository.findOne({
+      where: {
+        userId,
+        status: SessionStatus.COMPLETED,
+        completedAt: MoreThanOrEqual(today),
+      },
+    });
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
     if (!streak) {
       streak = this.userStreakRepository.create({
         userId,
-        currentStreak: 7,
-        longestStreak: 14,
-        lastPracticeDate: new Date(),
-        weeklyActivity: [
-          { date: '2026-03-15', practiced: true },
-          { date: '2026-03-16', practiced: true },
-          { date: '2026-03-17', practiced: true },
-          { date: '2026-03-18', practiced: true },
-          { date: '2026-03-19', practiced: true },
-          { date: '2026-03-20', practiced: true },
-          { date: '2026-03-21', practiced: true },
-        ],
+        currentStreak: hasPracticedToday ? 1 : 0,
+        longestStreak: hasPracticedToday ? 1 : 0,
+        lastPracticeDate: hasPracticedToday ? today : undefined,
+        weeklyActivity: [],
       });
-      await this.userStreakRepository.save(streak);
+    } else {
+      const lastDate = streak.lastPracticeDate
+        ? new Date(streak.lastPracticeDate).toISOString().split('T')[0]
+        : null;
+
+      if (hasPracticedToday && lastDate !== todayStr) {
+        if (lastDate === yesterdayStr) {
+          streak.currentStreak += 1;
+        } else if (lastDate !== todayStr) {
+          streak.currentStreak = 1;
+        }
+        streak.lastPracticeDate = today;
+      } else if (
+        !hasPracticedToday &&
+        lastDate &&
+        lastDate !== yesterdayStr &&
+        lastDate !== todayStr
+      ) {
+        streak.currentStreak = 0;
+      }
+
+      if (streak.currentStreak > streak.longestStreak) {
+        streak.longestStreak = streak.currentStreak;
+      }
     }
 
-    return streak;
+    const weeklyActivity: Array<{ date: string; practiced: boolean }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+
+      const dayStart = new Date(d);
+      const dayEnd = new Date(d);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const count = await this.practiceSessionRepository.count({
+        where: {
+          userId,
+          status: SessionStatus.COMPLETED,
+          completedAt: MoreThanOrEqual(dayStart),
+        },
+      });
+
+      weeklyActivity.push({ date: dateStr, practiced: count > 0 });
+    }
+    streak.weeklyActivity = weeklyActivity;
+
+    return this.userStreakRepository.save(streak);
+  }
+
+  private getWeekString(date: Date): string {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const weekNo = Math.ceil(
+      ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+    );
+    return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
   }
 }

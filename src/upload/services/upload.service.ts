@@ -9,6 +9,7 @@ export enum FileCategory {
   AVATAR = 'avatars',
   MATERIAL = 'materials',
   DOCUMENT = 'documents',
+  COURSE_IMAGE = 'course-images',
 }
 
 @Injectable()
