@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Admin } from '../admin/entities/admin.entity';
 import { User } from '../users/entities/user.entity';
 import { UserSearchHistory } from '../users/entities/user-search-history.entity';
 import { Course } from '../courses/entities/course.entity';
@@ -41,6 +42,7 @@ import { PlatformSettings } from '../admin/entities/platform-settings.entity';
         const dbConfig: Record<string, unknown> = {
           type: 'postgres',
           entities: [
+            Admin,
             User,
             UserSearchHistory,
             Course,
