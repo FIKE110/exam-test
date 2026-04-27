@@ -74,10 +74,12 @@ import { PlatformSettings } from '../admin/entities/platform-settings.entity';
         };
 
         if (databaseUrl) {
-          Object.assign(dbConfig, { url: databaseUrl });
-          if (isProduction || !isLocalDb) {
-            dbConfig.extra = { ssl: { rejectUnauthorized: false } };
-          }
+          const caCertBase64 = configService.get('SSL_CA_CERT');
+          const caCert = Buffer.from(caCertBase64, 'base64').toString('utf8');
+          Object.assign(dbConfig, { 
+            url: databaseUrl.replace('?sslmode=require', ''),
+            ssl: { rejectUnauthorized: true, ca: caCert }
+          });
         } else {
           Object.assign(dbConfig, {
             host: dbHost,
@@ -90,10 +92,10 @@ import { PlatformSettings } from '../admin/entities/platform-settings.entity';
 
         if (isProduction) {
           dbConfig.extra = {
+            ...(dbConfig.extra as object || {}),
             max: 5,
             connectionTimeoutMillis: 10000,
             idleTimeoutMillis: 30000,
-            ssl: { rejectUnauthorized: false },
           };
         }
 
