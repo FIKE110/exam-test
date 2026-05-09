@@ -73,6 +73,7 @@ async function bootstrap() {
   });
 
   // Scalar API documentation
+  
   server.use(
     '/api/docs',
     apiReference({
