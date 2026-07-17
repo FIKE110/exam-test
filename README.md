@@ -59,6 +59,7 @@ POST /api/auth/register
 
 **Response (201):**
 
+
 ```json
 {
   "status": true,
