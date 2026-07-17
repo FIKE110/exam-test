@@ -1,70 +1,66 @@
 name: Deploy Nestjs app
 
-on: 
-    push: 
-        branches: 
-            - main
-
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with: 
-                node-version: 24
-            
-            - name: Install pnpm
-              run: npm install -g pnpm
-            
-            - name: Install dependencies
-              run: |
-                    pnpm config set ignore-scripts false
-                    pnpm install --frozen-lockfile
-            
-            - name: build project
-              run: pnpm build
-            
-            - name: Create artifact
-              run: |
-                tar -czf app.tar.gz dist package.json pnpm-lock.yaml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Copy files to server
-              uses: appleboy/scp-action@v0.1.7
-              with:
-                host: ${{ secrets.SERVER_IP }}
-                username: ${{ secrets.SERVER_USER }}
-                password: ${{ secrets.SSH_PASSWORD }}
-                source: "app.tar.gz"
-                target: "/home/${{ secrets.SERVER_USER }}/app"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
-            - name: Deploy via SSH
-              uses: appleboy/ssh-action@v1.0.3
-              with:
-                host: ${{ secrets.SERVER_IP }}
-                username: ${{ secrets.SERVER_USER }}
-                password: ${{ secrets.SSH_PASSWORD }}
+      - name: Install pnpm
+        run: npm install -g pnpm@9
 
-                script: |
-                    cd /home/${{ secrets.SERVER_USER }}/app
-                    echo "Cleaning old build..."
-                    rm -rf dist
-                    echo "Extracting..."
-                    tar -xzf app.tar.gz
-                    echo "Installing pnpm..."
-                    npm install -g pnpm
-                    echo "${{ secrets.ENV_FILE }}" > .env
-                    echo "dotenv" > .envrc
-                    direnv allow
-                    direnv reload
-                    echo "Installing production deps..."
-                    pnpm config set ignore-scripts false
-                    pnpm install --prod --frozen-lockfile
-                    echo "Restarting app..."
-                    pm2 restart nest-app || pm2 start dist/main.js --interpreter /home/my-app/.nvm/versions/node/v24.14.1/bin/node --name nest-app
-                    echo "Done"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Create artifact
+        run: |
+          tar -czf app.tar.gz dist package.json pnpm-lock.yaml
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "app.tar.gz"
+          target: "/home/${{ secrets.SERVER_USER }}/app"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+
+          script: |
+            cd /home/${{ secrets.SERVER_USER }}/app
+            echo "Cleaning old build..."
+            rm -rf dist
+            echo "Extracting..."
+            tar -xzf app.tar.gz
+            echo "Installing pnpm..."
+            npm install -g pnpm@9
+            echo "${{ secrets.ENV_FILE }}" > .env
+            echo "dotenv" > .envrc
+            direnv allow
+            direnv reload
+            echo "Installing production deps..."
+            pnpm install --prod --frozen-lockfile
+            echo "Restarting app..."
+            pm2 restart nest-app || pm2 start dist/main.js --interpreter /home/my-app/.nvm/versions/node/v24.14.1/bin/node --name nest-app
+            echo "Done"
